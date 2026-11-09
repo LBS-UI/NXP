@@ -8,9 +8,6 @@
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Orbitron:wght@500;600;700;800;900&display=swap');
 
-/* ============================================================
-   NEXTGEN THEME VARIABLES
-   ============================================================ */
 :root {
   --navy: #061640;
   --navy-light: #0b2863;
@@ -45,9 +42,6 @@ body {
   text-align: left;
 }
 
-/* ============================================================
-   HEADER — NEXTGEN gradient banner
-   ============================================================ */
 header {
   position: relative;
   padding: 1.5rem 1.25rem 1.35rem;
@@ -100,9 +94,6 @@ header .tagline {
   text-transform: uppercase;
 }
 
-/* ============================================================
-   LAYOUT
-   ============================================================ */
 .container {
   max-width: 960px;
   margin: 0 auto;
@@ -131,9 +122,6 @@ header .tagline {
   align-items: center;
 }
 
-/* ============================================================
-   FORM CONTROLS
-   ============================================================ */
 button,
 select,
 input[type="range"],
@@ -196,9 +184,6 @@ label {
 
 input[type="range"] { accent-color: var(--blue); }
 
-/* ============================================================
-   PREVIEW STAGE
-   ============================================================ */
 #previewWrap {
   position: relative;
   background: #dce9fb;
@@ -224,9 +209,6 @@ input[type="range"] { accent-color: var(--blue); }
 
 .controls { margin-top: 0.9rem; }
 
-/* ============================================================
-   STATUS
-   ============================================================ */
 .status {
   margin-top: 0.9rem;
   padding: 0.7rem 0.9rem;
@@ -253,9 +235,6 @@ input[type="range"] { accent-color: var(--blue); }
 .status.success { animation: status-pop 0.5s ease-out; }
 .status.error   { animation: status-shake 0.5s ease-out; }
 
-/* ============================================================
-   QR PANEL
-   ============================================================ */
 #qrContainer {
   display: none;
   text-align: center;
@@ -311,9 +290,6 @@ input[type="range"] { accent-color: var(--blue); }
   display: none;
 }
 
-/* ============================================================
-   PRIVACY NOTE
-   ============================================================ */
 .privacy {
   font-size: 0.78rem;
   color: var(--muted);
@@ -325,9 +301,6 @@ input[type="range"] { accent-color: var(--blue); }
   border-radius: 9px;
 }
 
-/* ============================================================
-   NEXTGEN-STYLE FOOTER
-   ============================================================ */
 .site-footer {
   padding: 1.25rem 1rem;
   text-align: center;
@@ -353,9 +326,6 @@ input[type="range"] { accent-color: var(--blue); }
   letter-spacing: 1px;
 }
 
-/* ============================================================
-   ADDITIVE ANIMATIONS
-   ============================================================ */
 @keyframes fade-up {
   from { opacity: 0; transform: translateY(24px); }
   to   { opacity: 1; transform: translateY(0); }
@@ -573,7 +543,7 @@ window.addEventListener("unhandledrejection", function (event) {
 });
 
 /* ========== CONFIG ========== */
-const CF_WORKER_URL = "YOUR_WORKER_URL_HERE";   // e.g. https://snapstudio-upload.yourname.workers.dev
+const CF_WORKER_URL = "YOUR_WORKER_URL_HERE";   // leave as-is for demo mode
 
 /* ========== STATE ========== */
 let stream = null;
@@ -619,9 +589,8 @@ function revokeBlobUrl() {
   }
 }
 
-/* ========== CAMERA (patched) ========== */
+/* ========== CAMERA ========== */
 async function startCamera() {
-  // 1) Secure context check — camera APIs don't exist on file:// or http://non-localhost
   if (!window.isSecureContext) {
     setStatus(
       "Camera needs HTTPS or localhost. If you double-clicked the file (file://), " +
@@ -632,7 +601,6 @@ async function startCamera() {
     return;
   }
 
-  // 2) API availability check
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
     setStatus(
       "This browser does not support camera access. Try Chrome, Firefox, Edge, or Safari. " +
@@ -642,7 +610,6 @@ async function startCamera() {
     return;
   }
 
-  // 3) Stop any existing stream
   if (stream) {
     stream.getTracks().forEach(function (t) { t.stop(); });
     stream = null;
@@ -652,7 +619,6 @@ async function startCamera() {
 
   let newStream = null;
 
-  // 4) Try the preferred facingMode first
   try {
     newStream = await navigator.mediaDevices.getUserMedia({
       video: {
@@ -664,8 +630,6 @@ async function startCamera() {
     });
   } catch (firstErr) {
     console.warn("Preferred camera constraints failed:", firstErr && firstErr.name);
-
-    // 5) Fallback: accept ANY camera the device has
     try {
       newStream = await navigator.mediaDevices.getUserMedia({
         video: true,
@@ -692,11 +656,9 @@ async function startCamera() {
     }
   }
 
-  // 6) Attach the stream to the <video>
   stream = newStream;
   preview.srcObject = stream;
 
-  // 7) Wait for metadata so videoWidth/videoHeight are populated
   if (preview.readyState < 1) {
     await new Promise(function (resolve) {
       const onReady = function () {
@@ -707,14 +669,12 @@ async function startCamera() {
     });
   }
 
-  // 8) Start playback
   try {
     await preview.play();
   } catch (playErr) {
     console.warn("preview.play() rejected:", playErr);
   }
 
-  // 9) Enable controls
   document.getElementById("flipBtn").disabled = false;
   document.getElementById("captureBtn").disabled = false;
   setStatus("Camera ready", "success");
@@ -729,7 +689,6 @@ document.getElementById("flipBtn").addEventListener("click", () => {
 
 /* ========== CAPTURE / FILE ========== */
 function drawToCanvas(source, w, h) {
-  // Draw the full-resolution source into the OFFSCREEN canvas.
   originalCanvas.width = w;
   originalCanvas.height = h;
   originalCtx.drawImage(source, 0, 0, w, h);
@@ -737,8 +696,6 @@ function drawToCanvas(source, w, h) {
   preview.style.display = "none";
   canvas.style.display = "block";
   photoReady = true;
-
-  // Re-renders read from the offscreen canvas, never from the visible one.
   sourceImage = originalCanvas;
 
   editControls.style.display = "flex";
@@ -752,8 +709,6 @@ document.getElementById("captureBtn").addEventListener("click", async () => {
     return;
   }
 
-  // Use requestVideoFrameCallback when available — it fires AFTER the browser
-  // has actually painted a frame, so we never grab a stale/black buffer.
   if ("requestVideoFrameCallback" in preview) {
     await new Promise(function (resolve) {
       preview.requestVideoFrameCallback(function () { resolve(); });
@@ -847,7 +802,7 @@ downloadBtn.addEventListener("click", async () => {
   }
 });
 
-/* ========== QR / UPLOAD ========== */
+/* ========== QR / UPLOAD (integrated from your snippet) ========== */
 async function uploadToCloudflare(blob, ext) {
   setStatus("Requesting one-time upload URL from Cloudflare Worker…", "info");
 
@@ -856,25 +811,19 @@ async function uploadToCloudflare(blob, ext) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ contentType: blob.type })
   });
-
   if (!urlRes.ok) {
     let errBody = await urlRes.text();
     try { errBody = JSON.stringify(JSON.parse(errBody), null, 2); } catch (_) {}
     throw new Error(`Requesting upload URL failed (${urlRes.status}): ${errBody}`);
   }
-
   const data = await urlRes.json();
-  if (!data.uploadURL || !data.publicURL) {
-    throw new Error("Worker response missing uploadURL or publicURL");
-  }
+  if (!data.uploadURL || !data.publicURL) throw new Error("Worker response missing uploadURL or publicURL");
 
   setStatus("Uploading image to Cloudflare…", "info");
 
   const form = new FormData();
   form.append("file", new File([blob], `snapstudio.${ext}`, { type: blob.type }));
-
   const uploadRes = await fetch(data.uploadURL, { method: "POST", body: form });
-
   if (!uploadRes.ok) {
     let detail = `status ${uploadRes.status}`;
     try {
@@ -883,7 +832,6 @@ async function uploadToCloudflare(blob, ext) {
     } catch (_) {}
     throw new Error(`Cloudflare upload failed: ${detail}`);
   }
-
   return { publicURL: data.publicURL, provider: "Cloudflare Images" };
 }
 
@@ -899,16 +847,10 @@ async function uploadToTemporaryHost(blob, ext) {
     method: "POST",
     body: form
   });
-
-  if (!res.ok) {
-    throw new Error(`Temporary upload failed (${res.status})`);
-  }
+  if (!res.ok) throw new Error(`Temporary upload failed (${res.status})`);
 
   const publicURL = (await res.text()).trim();
-  if (!publicURL.startsWith("http")) {
-    throw new Error("Temporary host returned an invalid URL: " + publicURL);
-  }
-
+  if (!publicURL.startsWith("http")) throw new Error("Temporary host returned an invalid URL: " + publicURL);
   return { publicURL, provider: "temporary host (litterbox.catbox.moe)" };
 }
 
@@ -937,7 +879,6 @@ function showQR(publicURL, provider) {
   qrContainer.style.display = "block";
   downloadQRBtn.style.display = "inline-block";
   downloadQRBtn.disabled = false;
-
   qrContainer.scrollIntoView({ behavior: "smooth", block: "center" });
 
   const note = provider.includes("temporary")
@@ -954,14 +895,8 @@ async function generateQR() {
   generateQRBtn.disabled = true;
   retryUploadBtn.style.display = "none";
   try {
-    if (!photoReady || !sourceImage) {
-      throw new Error("No photo is ready. Capture or upload an image first.");
-    }
-    if (typeof QRCode === "undefined") {
-      throw new Error("QRCode library failed to load. Check your network connection.");
-    }
+    if (typeof QRCode === "undefined") throw new Error("QRCode library failed to load");
 
-    renderImage();
     const blob = await getImageBlob();
     const ext = blob.type === "image/jpeg" ? "jpg" : blob.type.split("/")[1];
 
@@ -977,8 +912,7 @@ async function generateQR() {
         console.error(uploadErr);
         throw new Error(
           "Demo upload failed (network or CORS block). " +
-          "For reliable sharing, set up the Cloudflare Worker (see SETUP.md). " +
-          "You can still use the Download Image button to save the photo locally."
+          "Set up the Cloudflare Worker for reliable sharing, or use the Download Image button."
         );
       }
     }
@@ -987,6 +921,7 @@ async function generateQR() {
   } catch (err) {
     console.error(err);
     setStatus(err.message || "Upload failed", "error");
+    alert(err.message || "Upload failed");
     retryUploadBtn.style.display = "inline-block";
   } finally {
     generateQRBtn.disabled = false;
@@ -996,15 +931,11 @@ async function generateQR() {
 generateQRBtn.addEventListener("click", generateQR);
 retryUploadBtn.addEventListener("click", generateQR);
 
-/* QR download */
 downloadQRBtn.addEventListener("click", () => {
   const img = qrcodeEl.querySelector("img");
   const canvas = qrcodeEl.querySelector("canvas");
   const src = img ? img.src : (canvas ? canvas.toDataURL("image/png") : null);
-  if (!src) {
-    setStatus("Could not find QR image to download", "error");
-    return;
-  }
+  if (!src) return;
   const a = document.createElement("a");
   a.href = src;
   a.download = `snapstudio-qr-${Date.now()}.png`;
@@ -1021,7 +952,6 @@ downloadQRBtn.addEventListener("click", () => {
 
   function init() {
 
-    /* 1. HEADER TYPING ANIMATION */
     const headerH1 = document.querySelector("header h1");
     if (headerH1) {
       const fullText = headerH1.textContent || "";
@@ -1039,7 +969,6 @@ downloadQRBtn.addEventListener("click", () => {
       }, 90);
     }
 
-    /* 2. SCROLL REVEAL */
     const revealObserver = new IntersectionObserver(
       function (entries) {
         entries.forEach(function (entry) {
@@ -1074,7 +1003,6 @@ downloadQRBtn.addEventListener("click", () => {
     addReveal(document.getElementById("qrContainer"), 0.36);
     addReveal(document.querySelector(".privacy"), 0.4);
 
-    /* 3. LIVE RATIO BADGE */
     const previewWrap = document.getElementById("previewWrap");
     const ratioSelect = document.getElementById("ratioSelect");
     const editControlsRef = document.getElementById("editControls");
@@ -1106,7 +1034,6 @@ downloadQRBtn.addEventListener("click", () => {
       }
     }
 
-    /* 4. JUMP TO QR BUTTON */
     const downloadQRBtnRef = document.getElementById("downloadQRBtn");
     const qrBox = document.getElementById("qrContainer");
 
@@ -1143,7 +1070,6 @@ downloadQRBtn.addEventListener("click", () => {
       });
     }
 
-    /* 5. QR APPEAR ANIMATION */
     if (qrBox) {
       const appearObserver = new MutationObserver(function () {
         if (qrBox.style.display === "block") {
@@ -1158,7 +1084,6 @@ downloadQRBtn.addEventListener("click", () => {
       });
     }
 
-    /* 6. ACTIVE CAMERA GLOW */
     const captureBtnRef = document.getElementById("captureBtn");
     if (previewWrap && captureBtnRef) {
       const cameraObserver = new MutationObserver(function () {
