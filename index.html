@@ -1006,7 +1006,20 @@ input[type="range"] { width: 100%; height: 6px; accent-color: var(--blue); curso
   border: 1px solid var(--border); border-radius: 16px;
   background: #f8fbff;
 }
-#qrgCanvas { display: block; max-width: 100%; height: auto; background: white; }
+.qrg-qr-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: white;
+  padding: 8px;
+  border-radius: 8px;
+}
+.qrg-qr-container canvas,
+.qrg-qr-container img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
 .qrg-qr-empty {
   display: flex; flex-direction: column; align-items: center;
   gap: 10px; color: var(--muted); font-size: 12px; text-align: center;
@@ -1593,7 +1606,7 @@ input[type="range"] { width: 100%; height: 6px; accent-color: var(--blue); curso
           The QR code encodes the exact image URL. Nothing is uploaded by this page.
         </p>
         <div class="qrg-qr-stage">
-          <canvas id="qrgCanvas" width="320" height="320" aria-label="Generated QR code" hidden></canvas>
+          <div id="qrgCanvas" class="qrg-qr-container" aria-label="Generated QR code" hidden></div>
           <div id="qrgQrEmpty" class="qrg-qr-empty">
             <span aria-hidden="true">▦</span>
             <p>Your QR code will appear here</p>
@@ -1630,13 +1643,15 @@ input[type="range"] { width: 100%; height: 6px; accent-color: var(--blue); curso
     <img id="editorPrintImage" alt="Edited photo">
   </div>
 
-<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 
 <script>
 "use strict";
 
 document.addEventListener("DOMContentLoaded", () => {
   const $ = id => document.getElementById(id);
+
+  const CF_WORKER_URL = "YOUR_WORKER_URL_HERE"; // set to your Worker URL to enable Cloudflare uploads
 
   const pages = document.querySelectorAll(".page");
   const typedSubtitles = new WeakSet();
@@ -1975,35 +1990,23 @@ document.addEventListener("DOMContentLoaded", () => {
     updateStatus(`${ratio} photo size selected.`);
   }
 
-  /* =====================================================
-     CAMERA — PATCHED for maximum device compatibility
-     ===================================================== */
   async function startCamera() {
     if (cameraReady || busy) return;
-
-    // 1) Secure-context check (file:// or http://non-localhost silently fails)
     if (!window.isSecureContext) {
       updateStatus("Camera needs HTTPS or localhost. If you opened the file directly, serve it with a local server or deploy to GitHub Pages. You can still use Photo Studio on phones via HTTPS.");
       return;
     }
-
-    // 2) API availability
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
       updateStatus("This browser does not support camera access. Try Chrome, Firefox, Edge or Safari.");
       return;
     }
-
     if (stream) {
       stream.getTracks().forEach(t => t.stop());
       stream = null;
     }
-
     startButton.disabled = true;
     updateStatus("Opening camera...");
-
     let newStream = null;
-
-    // 3) Try preferred facingMode
     try {
       newStream = await navigator.mediaDevices.getUserMedia({
         audio: false,
@@ -2015,8 +2018,6 @@ document.addEventListener("DOMContentLoaded", () => {
       });
     } catch (firstErr) {
       console.warn("Preferred camera constraints failed:", firstErr && firstErr.name);
-
-      // 4) Fallback: accept ANY camera the device has
       try {
         newStream = await navigator.mediaDevices.getUserMedia({
           video: true,
@@ -2026,7 +2027,6 @@ document.addEventListener("DOMContentLoaded", () => {
         console.error(secondErr);
         const err = secondErr;
         let msg = err.message || "Unknown camera error";
-
         if (err.name === "NotAllowedError" || err.name === "SecurityError") {
           msg = "Camera permission was denied. Click the camera/lock icon in your browser's address bar, choose 'Allow', then click Start Camera again.";
         } else if (err.name === "NotFoundError" || err.name === "OverconstrainedError") {
@@ -2034,22 +2034,17 @@ document.addEventListener("DOMContentLoaded", () => {
         } else if (err.name === "NotReadableError") {
           msg = "The camera is being used by another app (Zoom, Teams, etc.). Close that app, then click Start Camera again.";
         }
-
         updateStatus("Camera error: " + msg);
         startButton.disabled = false;
         return;
       }
     }
-
     if (disposed) {
       newStream.getTracks().forEach(track => track.stop());
       return;
     }
-
     stream = newStream;
     camera.srcObject = stream;
-
-    // 5) Wait for metadata so videoWidth / videoHeight are populated
     if (camera.readyState < 1) {
       await new Promise(resolve => {
         const onReady = () => {
@@ -2059,18 +2054,15 @@ document.addEventListener("DOMContentLoaded", () => {
         camera.addEventListener("loadedmetadata", onReady, { once: true });
       });
     }
-
     try {
       await camera.play();
     } catch (playErr) {
       console.warn("camera.play() rejected:", playErr);
     }
-
     cameraReady = true;
     placeholder.classList.add("hidden");
     startButton.textContent = "Camera Ready";
     if (cameraFrame) cameraFrame.classList.add("is-active");
-
     updateControls();
     updateStatus("Choose your layout and get ready!");
   }
@@ -2079,32 +2071,22 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!cameraReady || !camera.videoWidth || !camera.videoHeight) {
       throw new Error("The camera is not ready.");
     }
-
-    // Wait for a fresh painted frame when the API is available, so the first
-    // click never produces a black / empty image.
     if ("requestVideoFrameCallback" in camera) {
       await new Promise(resolve => camera.requestVideoFrameCallback(() => resolve()));
     } else {
       await wait(120);
     }
-
     canvas.width = camera.videoWidth;
     canvas.height = camera.videoHeight;
-
-    // Mirror the snapshot to match the front-camera preview (selfie view).
     ctx.save();
     ctx.translate(canvas.width, 0);
     ctx.scale(-1, 1);
     ctx.drawImage(camera, 0, 0, canvas.width, canvas.height);
     ctx.restore();
-
     const blob = await new Promise(resolve => canvas.toBlob(resolve, "image/jpeg", 0.95));
     if (!blob) throw new Error("Unable to create the photo.");
     return createImageBitmap(blob);
   }
-  /* =====================================================
-     END CAMERA PATCH
-     ===================================================== */
 
   async function runCountdown(token) {
     for (let remaining = selectedSeconds; remaining > 0; remaining--) {
@@ -2311,7 +2293,46 @@ document.addEventListener("DOMContentLoaded", () => {
     ]);
   }
 
+  async function uploadToCloudflare(blob, ext) {
+    const urlRes = await fetch(`${CF_WORKER_URL}/api/upload-url`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ contentType: blob.type })
+    });
+    if (!urlRes.ok) {
+      let errBody = await urlRes.text();
+      try { errBody = JSON.stringify(JSON.parse(errBody), null, 2); } catch (_) {}
+      throw new Error(`Requesting upload URL failed (${urlRes.status}): ${errBody}`);
+    }
+    const data = await urlRes.json();
+    if (!data.uploadURL || !data.publicURL) throw new Error("Worker response missing uploadURL or publicURL");
+    const form = new FormData();
+    form.append("file", new File([blob], `nextgen.${ext}`, { type: blob.type }));
+    const uploadRes = await fetch(data.uploadURL, { method: "POST", body: form });
+    if (!uploadRes.ok) {
+      let detail = `status ${uploadRes.status}`;
+      try {
+        const j = await uploadRes.json();
+        if (j.errors) detail += " — " + JSON.stringify(j.errors);
+      } catch (_) {}
+      throw new Error(`Cloudflare upload failed: ${detail}`);
+    }
+    return data.publicURL;
+  }
+
   async function uploadTempFile(blob) {
+    if (CF_WORKER_URL && CF_WORKER_URL !== "YOUR_WORKER_URL_HERE") {
+      try {
+        const ext = blob.type === "image/jpeg" ? "jpg" : (blob.type.split("/")[1] || "jpg");
+        console.log("[QR] Trying Cloudflare Worker…");
+        const url = await uploadToCloudflare(blob, ext);
+        console.log("[QR] Cloudflare succeeded →", url);
+        return url;
+      } catch (err) {
+        console.warn("[QR] Cloudflare failed:", err.message);
+      }
+    }
+
     const hosts = [
       { name: "0x0.st", fn: async (blob) => {
         const form = new FormData();
@@ -2355,6 +2376,7 @@ document.addEventListener("DOMContentLoaded", () => {
         return text;
       }}
     ];
+
     const errors = [];
     for (const host of hosts) {
       try {
@@ -2389,14 +2411,36 @@ document.addEventListener("DOMContentLoaded", () => {
   async function renderQrImage(url) {
     if (typeof QRCode !== "undefined") {
       try {
-        const c = document.createElement("canvas");
-        await QRCode.toCanvas(c, url, {
-          width: 280, margin: 4, errorCorrectionLevel: "M",
-          color: { dark: "#061640", light: "#ffffff" }
+        const temp = document.createElement("div");
+        new QRCode(temp, {
+          text: url,
+          width: 280,
+          height: 280,
+          correctLevel: QRCode.CorrectLevel.M,
+          colorDark: "#061640",
+          colorLight: "#ffffff"
         });
-        return { dataUrl: c.toDataURL("image/png"), canvas: c };
+        const canvas = temp.querySelector("canvas");
+        const img = temp.querySelector("img");
+        if (canvas) {
+          return { dataUrl: canvas.toDataURL("image/png"), canvas };
+        }
+        if (img && img.src) {
+          const outCanvas = await new Promise(resolve => {
+            const c = document.createElement("canvas");
+            const image = new Image();
+            image.onload = () => {
+              c.width = image.width;
+              c.height = image.height;
+              c.getContext("2d").drawImage(image, 0, 0);
+              resolve(c);
+            };
+            image.src = img.src;
+          });
+          return { dataUrl: outCanvas.toDataURL("image/png"), canvas: outCanvas };
+        }
       } catch (err) {
-        console.warn("QRCode.js failed, falling back to api.qrserver.com:", err);
+        console.warn("QRCode generation failed, falling back to api.qrserver.com:", err);
       }
     }
     const apiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=280x280&margin=8&data=${encodeURIComponent(url)}`;
@@ -3137,7 +3181,9 @@ document.addEventListener("DOMContentLoaded", () => {
       els.previewMeta.hidden = false;
     }
     function clearQr() {
-      els.canvas.hidden = true; els.qrEmpty.hidden = false;
+      els.canvas.hidden = true;
+      els.canvas.innerHTML = "";
+      els.qrEmpty.hidden = false;
       els.qrTarget.hidden = true; els.qrTarget.textContent = "";
       els.downloadQrBtn.disabled = true; setMessage(els.status, "");
     }
@@ -3264,9 +3310,14 @@ document.addEventListener("DOMContentLoaded", () => {
       els.generateBtn.disabled = true;
       try {
         if (typeof QRCode === "undefined") throw new Error("QR library did not load. Check your internet connection.");
-        await QRCode.toCanvas(els.canvas, state.url, {
-          width: 320, margin: 4, errorCorrectionLevel: "M",
-          color: { dark: "#0b1f3a", light: "#ffffff" }
+        els.canvas.innerHTML = "";
+        new QRCode(els.canvas, {
+          text: state.url,
+          width: 320,
+          height: 320,
+          correctLevel: QRCode.CorrectLevel.M,
+          colorDark: "#0b1f3a",
+          colorLight: "#ffffff"
         });
         els.canvas.hidden = false; els.qrEmpty.hidden = true;
         els.qrTarget.hidden = false; els.qrTarget.textContent = state.url;
@@ -3279,8 +3330,14 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     function downloadQr() {
       if (els.canvas.hidden) return;
+      const canvasChild = els.canvas.querySelector("canvas");
+      const imgChild = els.canvas.querySelector("img");
+      let dataUrl = null;
+      if (canvasChild) dataUrl = canvasChild.toDataURL("image/png");
+      else if (imgChild && imgChild.src) dataUrl = imgChild.src;
+      if (!dataUrl) return;
       const link = document.createElement("a");
-      link.href = els.canvas.toDataURL("image/png");
+      link.href = dataUrl;
       link.download = "image-download-qr.png";
       document.body.appendChild(link); link.click(); link.remove();
     }
