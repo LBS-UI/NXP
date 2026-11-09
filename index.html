@@ -155,10 +155,18 @@
     <div id="status" class="status"></div>
 
     <div id="qrContainer">
+      <h3 style="margin:0 0 0.5rem;font-size:1.1rem">Share this image</h3>
       <div id="qrcode"></div>
-      <p style="margin:0.5rem 0 0;font-size:0.9rem;color:var(--muted)">
-        Scan to open the image. Long-press (or right-click → Save image) to save it.
+      <p style="margin:0.75rem 0 0.25rem;font-size:0.9rem;color:var(--muted)">
+        Scan the QR code with any phone camera. It opens the image in the browser so anyone can save it (long-press on mobile, or right-click → Save image on desktop).
       </p>
+      <p style="margin:0.5rem 0 0;font-size:0.9rem">
+        Or open / share this direct link:<br>
+        <a id="imageLink" href="#" target="_blank" rel="noopener" style="color:#93c5fd;word-break:break-all"></a>
+      </p>
+      <div style="margin-top:0.75rem">
+        <img id="imagePreview" alt="Uploaded image preview" style="max-width:100%;max-height:240px;border-radius:8px;display:none" />
+      </div>
     </div>
 
     <p class="privacy">
@@ -442,16 +450,27 @@ function showQR(publicURL, provider) {
     throw new Error("Failed to generate QR code: " + err.message);
   }
 
+  const linkEl = document.getElementById("imageLink");
+  linkEl.href = publicURL;
+  linkEl.textContent = publicURL;
+
+  const previewEl = document.getElementById("imagePreview");
+  previewEl.src = publicURL;
+  previewEl.style.display = "block";
+
   qrContainer.style.display = "block";
   downloadQRBtn.style.display = "inline-block";
   downloadQRBtn.disabled = false;
 
+  // Scroll the QR into view so it's obvious on the page
+  qrContainer.scrollIntoView({ behavior: "smooth", block: "center" });
+
   const note = provider.includes("temporary")
-    ? " (demo mode — link expires after a while)"
+    ? " (demo mode — link expires after about 1 hour)"
     : "";
 
   setStatus(
-    `QR code ready. It links to a hosted image on ${provider}${note}. Scanning opens the image in the browser. Long-press the image (or right-click → Save Image) to save it.`,
+    `QR code is now on the page. It links to the image on ${provider}${note}. Anyone who scans it (or opens the link) can view and download the image in Chrome or any browser.`,
     "success"
   );
 }
