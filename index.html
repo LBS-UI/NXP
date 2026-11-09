@@ -1,531 +1,521 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
-<title>SnapStudio — Camera → Crop → Cloudflare Images + QR</title>
-<style>
-  :root {
-    --bg: #0f1115;
-    --panel: #181b22;
-    --border: #2a2f3a;
-    --accent: #3b82f6;
-    --accent-hover: #2563eb;
-    --text: #e8eaed;
-    --muted: #9aa0aa;
-    --danger: #ef4444;
-    --success: #22c55e;
-  }
-  * { box-sizing: border-box; }
-  body {
-    margin: 0;
-    font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    min-height: 100vh;
-  }
-  header {
-    padding: 1rem 1.25rem;
-    border-bottom: 1px solid var(--border);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-  }
-  header h1 { margin: 0; font-size: 1.25rem; font-weight: 600; }
-  .container {
-    max-width: 960px;
-    margin: 0 auto;
-    padding: 1.25rem;
-    display: grid;
-    gap: 1.25rem;
-  }
-  .panel {
-    background: var(--panel);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 1rem;
-  }
-  .row { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; }
-  button, select, input[type="range"] {
-    font: inherit;
-    color: inherit;
-    background: #22262f;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 0.5rem 0.85rem;
-    cursor: pointer;
-  }
-  button:hover:not(:disabled) { background: #2c313c; }
-  button.primary {
-    background: var(--accent);
-    border-color: var(--accent);
-    color: white;
-    font-weight: 600;
-  }
-  button.primary:hover:not(:disabled) { background: var(--accent-hover); }
-  button.secondary { background: #2a2f3a; }
-  button:disabled { opacity: 0.5; cursor: not-allowed; }
-  #previewWrap {
-    position: relative;
-    background: #000;
-    border-radius: 10px;
-    overflow: hidden;
-    aspect-ratio: 16/9;
-    max-height: 70vh;
-  }
-  #preview, #canvas {
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-    display: block;
-  }
-  #canvas { display: none; }
-  .controls { margin-top: 0.75rem; }
-  label { font-size: 0.85rem; color: var(--muted); margin-right: 0.35rem; }
-  .status {
-    margin-top: 0.75rem;
-    padding: 0.6rem 0.8rem;
-    border-radius: 8px;
-    font-size: 0.9rem;
-    min-height: 2.2rem;
-  }
-  .status.info { background: #1e293b; color: #93c5fd; }
-  .status.error { background: #450a0a; color: #fecaca; }
-  .status.success { background: #052e16; color: #bbf7d0; }
-  #qrContainer {
-    display: none;
-    text-align: center;
-    margin-top: 1rem;
-  }
-  #qrcode { margin: 0.75rem auto; }
-  .privacy {
-    font-size: 0.8rem;
-    color: var(--muted);
-    margin-top: 1rem;
-    line-height: 1.4;
-  }
-  #retryUploadBtn { display: none; }
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#101426">
+  <title>SnapStudio — Camera & QR Image Downloader</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0b1020;
+      --panel: #151d30;
+      --panel2: #1d2940;
+      --text: #f4f7ff;
+      --muted: #a5b1c8;
+      --accent: #8b7cff;
+      --accent2: #6b5cff;
+      --border: #303c54;
+      --success: #81e6b2;
+      --danger: #ff9999;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      padding: 24px 16px 40px;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--text);
+      background: radial-gradient(ellipse at top, #20254b 0%, transparent 45%), var(--bg);
+    }
+    button, select, input { font: inherit; }
+    button {
+      border: 0;
+      border-radius: 10px;
+      padding: 12px 15px;
+      cursor: pointer;
+      font-weight: 650;
+      transition: transform .15s, opacity .15s;
+    }
+    button:hover:not(:disabled) { transform: translateY(-1px); }
+    button:disabled { cursor: not-allowed; opacity: .45; }
+    .primary { color: #fff; background: linear-gradient(135deg, var(--accent), var(--accent2)); }
+    .secondary { color: var(--text); background: var(--panel2); border: 1px solid var(--border); }
+    .app { max-width: 1060px; margin: 0 auto; }
+    header { text-align: center; margin: 8px 0 28px; }
+    header h1 { margin: 0; font-size: clamp(30px, 5vw, 44px); letter-spacing: -1.5px; }
+    header h1 span { color: #a89dff; }
+    header p { color: var(--muted); margin: 8px 0 0; }
+    .layout { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(290px, .8fr); gap: 20px; align-items: start; }
+    .panel { min-width: 0; padding: 20px; border: 1px solid var(--border); border-radius: 18px; background: rgba(21,29,48,.96); box-shadow: 0 15px 45px rgba(0,0,0,.18); }
+    h2 { font-size: 18px; margin: 0 0 14px; }
+    h3 { font-size: 15px; margin: 0 0 10px; }
+    .stage { width: 100%; min-height: 220px; aspect-ratio: 4 / 3; display: flex; align-items: center; justify-content: center; overflow: hidden; border-radius: 13px; background: #070b13; border: 1px solid #273147; }
+    #camera { display: none; width: 100%; height: 100%; object-fit: contain; }
+    #preview { display: none; max-width: 100%; max-height: 100%; width: auto; height: auto; object-fit: contain; }
+    .placeholder { padding: 25px; text-align: center; color: var(--muted); }
+    .camera-icon { font-size: 42px; margin-bottom: 8px; }
+    .controls { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 9px; margin-top: 14px; }
+    .controls button, .full { width: 100%; }
+    .section { padding: 17px 0; border-bottom: 1px solid var(--border); }
+    .section:first-child { padding-top: 0; }
+    .section:last-child { padding-bottom: 0; border-bottom: 0; }
+    .note { color: var(--muted); font-size: 12px; line-height: 1.6; }
+    .status { min-height: 22px; margin: 12px 0 0; font-size: 13px; line-height: 1.5; overflow-wrap: anywhere; color: #c6c9ff; }
+    .status.error { color: var(--danger); }
+    .status.success { color: var(--success); }
+    .field { margin-top: 13px; }
+    .field label { display: block; margin-bottom: 7px; font-size: 13px; color: var(--muted); }
+    select, input[type="file"] { width: 100%; padding: 11px; color: var(--text); border: 1px solid var(--border); border-radius: 9px; background: #101729; }
+    input[type="range"] { width: 100%; accent-color: var(--accent); }
+    .ratio-buttons { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 8px; }
+    .ratio-btn { padding: 11px 6px; color: var(--muted); background: #101729; border: 1px solid var(--border); }
+    .ratio-btn.active { color: #fff; border-color: var(--accent); background: #302b62; }
+    .full { margin-top: 12px; }
+    .divider { border: 0; border-top: 1px solid var(--border); margin: 17px 0; }
+    #qrContainer { display: none; width: fit-content; max-width: 100%; margin: 15px auto 0; padding: 14px; border-radius: 12px; background: #fff; text-align: center; }
+    #qrcode { display: flex; justify-content: center; align-items: center; }
+    #qrcode canvas, #qrcode img { display: block; max-width: 100%; height: auto; }
+    #qrContainer p { margin: 10px 0 0; color: #333; font-size: 12px; }
+    .notice { padding: 11px 12px; border: 1px solid #66512b; background: #302716; color: #f5dba5; border-radius: 9px; font-size: 12px; line-height: 1.6; margin-top: 12px; }
+    footer { margin-top: 24px; text-align: center; color: var(--muted); font-size: 12px; }
+    @media (max-width: 760px) { .layout { grid-template-columns: 1fr; } body { padding: 16px 12px 30px; } .panel { padding: 16px; } }
+  </style>
 </head>
 <body>
-<header>
-  <h1>SnapStudio</h1>
-  <span style="color:var(--muted);font-size:0.85rem">Camera · Crop · Cloudflare Images</span>
-</header>
+  <main class="app">
+    <header>
+      <h1>Snap<span>Studio</span></h1>
+      <p>Capture, crop, download, and share your photos with a QR code.</p>
+    </header>
 
-<div class="container">
-  <div class="panel">
-    <div id="previewWrap">
-      <video id="preview" autoplay playsinline muted></video>
-      <canvas id="canvas"></canvas>
+    <div class="layout">
+      <section class="panel">
+        <h2>Camera & Preview</h2>
+        <div class="stage">
+          <video id="camera" autoplay playsinline muted></video>
+          <canvas id="preview" aria-label="Processed image preview"></canvas>
+          <div id="placeholder" class="placeholder">
+            <div class="camera-icon">📷</div>
+            <div>Your photo preview will appear here.</div>
+          </div>
+        </div>
+        <div class="controls">
+          <button class="primary" id="startCamera">Open Camera</button>
+          <button class="secondary" id="flipCamera" disabled>Flip Camera</button>
+          <button class="primary" id="capture" disabled>Take Photo</button>
+          <button class="secondary" id="retake" disabled>Retake Photo</button>
+        </div>
+        <div class="section">
+          <h3>Or upload an image</h3>
+          <input id="fileInput" type="file" accept="image/jpeg,image/png,image/webp">
+          <p class="note">Supported uploads: JPG, PNG, and WebP.</p>
+        </div>
+        <p id="cameraStatus" class="status" role="status" aria-live="polite">Open the camera or upload an image to get started.</p>
+      </section>
+
+      <section class="panel">
+        <div class="section">
+          <h2>Image Settings</h2>
+          <h3>Aspect Ratio</h3>
+          <div class="ratio-buttons">
+            <button class="ratio-btn" data-ratio="16:9">16:9</button>
+            <button class="ratio-btn active" data-ratio="4:3">4:3</button>
+            <button class="ratio-btn" data-ratio="1:1">1:1</button>
+          </div>
+          <p class="note">The image is center-cropped without stretching.</p>
+          <div class="field">
+            <label for="format">Download format</label>
+            <select id="format">
+              <option value="image/jpeg">JPG</option>
+              <option value="image/png">PNG</option>
+              <option value="image/webp">WebP</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="quality">Image quality: <span id="qualityValue">92%</span></label>
+            <input id="quality" type="range" min="40" max="100" value="92">
+            <p class="note">Quality applies to JPG and WebP. PNG ignores this setting.</p>
+          </div>
+          <button class="primary full" id="downloadImage" disabled>Download Image</button>
+        </div>
+
+        <div class="section">
+          <h2>QR Code Image Download</h2>
+          <p class="note">Upload the processed image to Cloudflare R2, then generate a QR code that another device can scan to download it.</p>
+          <button class="primary full" id="generateQR" disabled>Upload Image & Generate QR</button>
+          <div id="qrContainer">
+            <div id="qrcode"></div>
+            <p>Scan to download your image</p>
+          </div>
+          <button class="secondary full" id="downloadQR" disabled>Download QR Code</button>
+          <p id="qrStatus" class="status" role="status" aria-live="polite">Take a photo or upload an image first.</p>
+          <div class="notice"><strong>Image expiry:</strong> QR download links expire after 24 hours by default. The Worker checks expiry even if the scheduled cleanup has not run yet.</div>
+        </div>
+      </section>
     </div>
+    <footer>SnapStudio · Camera access requires HTTPS or localhost.</footer>
+  </main>
 
-    <div class="controls row">
-      <button id="startCameraBtn" class="primary">Start Camera</button>
-      <button id="flipBtn" class="secondary" disabled>Flip Camera</button>
-      <button id="captureBtn" class="primary" disabled>Capture</button>
-      <label for="fileInput">or</label>
-      <input type="file" id="fileInput" accept="image/*" />
-    </div>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script>
+    // Replace this with the URL of your deployed Cloudflare Worker.
+    const API_BASE_URL = "https://snapstudio-api.YOUR_SUBDOMAIN.workers.dev";
 
-    <div class="controls row" id="editControls" style="display:none">
-      <label>Ratio</label>
-      <select id="ratioSelect">
-        <option value="16:9">16:9</option>
-        <option value="4:3">4:3</option>
-        <option value="1:1">1:1</option>
-      </select>
-      <label>Format</label>
-      <select id="formatSelect">
-        <option value="image/jpeg">JPG</option>
-        <option value="image/png">PNG</option>
-        <option value="image/webp">WebP</option>
-      </select>
-      <label>Quality <span id="qualityValue">0.85</span></label>
-      <input type="range" id="qualitySlider" min="0.5" max="1" step="0.05" value="0.85" />
-      <button id="downloadBtn" class="secondary">Download Image</button>
-    </div>
+    const video = document.getElementById("camera");
+    const canvas = document.getElementById("preview");
+    const ctx = canvas.getContext("2d");
+    const placeholder = document.getElementById("placeholder");
+    const startCameraBtn = document.getElementById("startCamera");
+    const flipCameraBtn = document.getElementById("flipCamera");
+    const captureBtn = document.getElementById("capture");
+    const retakeBtn = document.getElementById("retake");
+    const downloadImageBtn = document.getElementById("downloadImage");
+    const generateQRBtn = document.getElementById("generateQR");
+    const downloadQRBtn = document.getElementById("downloadQR");
+    const fileInput = document.getElementById("fileInput");
+    const formatSelect = document.getElementById("format");
+    const qualityInput = document.getElementById("quality");
+    const qualityValue = document.getElementById("qualityValue");
+    const cameraStatus = document.getElementById("cameraStatus");
+    const qrStatus = document.getElementById("qrStatus");
+    const qrContainer = document.getElementById("qrContainer");
+    const qrElement = document.getElementById("qrcode");
 
-    <div class="controls row">
-      <button id="generateQRBtn" class="primary" disabled>Upload Image & Generate QR</button>
-      <button id="retryUploadBtn" class="secondary">Retry Upload</button>
-      <button id="downloadQRBtn" class="secondary" disabled style="display:none">Download QR</button>
-    </div>
+    let cameraStream = null;
+    let sourceImage = null;
+    let hasImage = false;
+    let facingMode = "user";
+    let selectedRatio = "4:3";
+    let cameraRequest = 0;
+    let isUploading = false;
 
-    <div id="status" class="status"></div>
+    function setStatus(element, message, type = "") {
+      element.textContent = message;
+      element.className = "status" + (type ? " " + type : "");
+    }
 
-    <div id="qrContainer">
-      <h3 style="margin:0 0 0.5rem;font-size:1.1rem">Share this image</h3>
-      <div id="qrcode"></div>
-      <p style="margin:0.75rem 0 0.25rem;font-size:0.9rem;color:var(--muted)">
-        Scan the QR code with any phone camera. It opens the image in the browser so anyone can save it (long-press on mobile, or right-click → Save image on desktop).
-      </p>
-      <p style="margin:0.5rem 0 0;font-size:0.9rem">
-        Or open / share this direct link:<br>
-        <a id="imageLink" href="#" target="_blank" rel="noopener" style="color:#93c5fd;word-break:break-all"></a>
-      </p>
-      <div style="margin-top:0.75rem">
-        <img id="imagePreview" alt="Uploaded image preview" style="max-width:100%;max-height:240px;border-radius:8px;display:none" />
-      </div>
-    </div>
+    function resetQR(message = "Image changed. Generate a new QR code when ready.") {
+      qrElement.replaceChildren();
+      qrContainer.style.display = "none";
+      downloadQRBtn.disabled = true;
+      setStatus(qrStatus, hasImage ? message : "Take a photo or upload an image first.");
+    }
 
-    <p class="privacy">
-      Photos stay on your device until you choose to upload. When you generate a QR code the image is sent directly to Cloudflare Images (via a one-time upload URL obtained from a Cloudflare Worker). The Worker never receives the image bytes. Your Cloudflare API token stays on the server.
-    </p>
-  </div>
-</div>
+    function setImageReady(ready) {
+      hasImage = ready;
+      downloadImageBtn.disabled = !ready;
+      generateQRBtn.disabled = !ready || isUploading;
+      placeholder.style.display = ready ? "none" : "block";
+      canvas.style.display = ready ? "block" : "none";
+    }
 
-<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
-<script>
-/* ========== GLOBAL ERROR HANDLERS ========== */
-window.addEventListener("error", function (event) {
-    const box = document.createElement("pre");
-    box.style.cssText = `
-        position: fixed;
-        bottom: 10px;
-        left: 10px;
-        right: 10px;
-        padding: 12px;
-        background: #300;
-        color: #fff;
-        z-index: 999999;
-        white-space: pre-wrap;
-        overflow-wrap: anywhere;
-        font: 13px monospace;
-    `;
-    box.textContent =
-        "JavaScript Error:\n" +
-        event.message + "\n" +
-        "File: " + event.filename + "\n" +
-        "Line: " + event.lineno;
-    document.body.appendChild(box);
-});
-window.addEventListener("unhandledrejection", function (event) {
-    alert("Promise Error: " + event.reason);
-});
+    function stopCamera() {
+      cameraRequest++;
+      if (cameraStream) {
+        cameraStream.getTracks().forEach(track => track.stop());
+        cameraStream = null;
+      }
+      video.pause();
+      video.srcObject = null;
+      video.style.display = "none";
+      startCameraBtn.disabled = false;
+      flipCameraBtn.disabled = true;
+      captureBtn.disabled = true;
+    }
 
-/* ========== CONFIG ========== */
-const CF_WORKER_URL = "YOUR_WORKER_URL_HERE";   // e.g. https://snapstudio-upload.yourname.workers.dev
+    async function startCamera() {
+      if (!navigator.mediaDevices?.getUserMedia) {
+        setStatus(cameraStatus, "Camera access is unavailable. Use HTTPS or localhost, or upload an image.", "error");
+        return;
+      }
 
-/* ========== STATE ========== */
-let stream = null;
-let facingMode = "environment";
-let sourceImage = null;          // HTMLImageElement or video frame drawn
-let photoReady = false;
-let currentBlob = null;
-let currentBlobUrl = null;
+      const requestId = ++cameraRequest;
+      if (cameraStream) cameraStream.getTracks().forEach(track => track.stop());
+      cameraStream = null;
+      video.srcObject = null;
+      video.style.display = "block";
+      canvas.style.display = hasImage ? "block" : "none";
+      startCameraBtn.disabled = true;
+      flipCameraBtn.disabled = true;
+      captureBtn.disabled = true;
+      setStatus(cameraStatus, "Requesting camera permission...");
 
-const preview = document.getElementById("preview");
-const canvas = document.getElementById("canvas");
-const ctx = canvas.getContext("2d");
-const statusEl = document.getElementById("status");
-const qrContainer = document.getElementById("qrContainer");
-const qrcodeEl = document.getElementById("qrcode");
-const generateQRBtn = document.getElementById("generateQRBtn");
-const retryUploadBtn = document.getElementById("retryUploadBtn");
-const downloadQRBtn = document.getElementById("downloadQRBtn");
-const downloadBtn = document.getElementById("downloadBtn");
-const editControls = document.getElementById("editControls");
-const qualitySlider = document.getElementById("qualitySlider");
-const qualityValue = document.getElementById("qualityValue");
+      try {
+        let stream;
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({
+            audio: false,
+            video: { facingMode: { ideal: facingMode }, width: { ideal: 1920 }, height: { ideal: 1080 } }
+          });
+        } catch (firstError) {
+          stream = await navigator.mediaDevices.getUserMedia({ audio: false, video: true });
+        }
 
-/* ========== HELPERS ========== */
-function setStatus(msg, type = "info") {
-  statusEl.textContent = msg;
-  statusEl.className = "status " + type;
-}
-function clearStatus() {
-  statusEl.textContent = "";
-  statusEl.className = "status";
-}
-function revokeBlobUrl() {
-  if (currentBlobUrl) {
-    URL.revokeObjectURL(currentBlobUrl);
-    currentBlobUrl = null;
-  }
-}
+        if (requestId !== cameraRequest) {
+          stream.getTracks().forEach(track => track.stop());
+          return;
+        }
 
-/* ========== CAMERA ========== */
-async function startCamera() {
-  try {
-    if (stream) stream.getTracks().forEach(t => t.stop());
-    stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode, width: { ideal: 1920 }, height: { ideal: 1080 } },
-      audio: false
+        cameraStream = stream;
+        video.srcObject = stream;
+        await new Promise((resolve, reject) => {
+          if (video.readyState >= 1 && video.videoWidth > 0) return resolve();
+          const onReady = () => { cleanup(); resolve(); };
+          const onError = () => { cleanup(); reject(new Error("Camera preview could not be loaded.")); };
+          const cleanup = () => {
+            video.removeEventListener("loadedmetadata", onReady);
+            video.removeEventListener("error", onError);
+          };
+          video.addEventListener("loadedmetadata", onReady, { once: true });
+          video.addEventListener("error", onError, { once: true });
+        });
+        if (requestId !== cameraRequest) return;
+        await video.play();
+        if (requestId !== cameraRequest) return;
+        flipCameraBtn.disabled = false;
+        captureBtn.disabled = false;
+        setStatus(cameraStatus, "Camera ready. Take a photo whenever you're ready.", "success");
+      } catch (error) {
+        if (requestId !== cameraRequest) return;
+        if (cameraStream) cameraStream.getTracks().forEach(track => track.stop());
+        cameraStream = null;
+        video.srcObject = null;
+        video.style.display = "none";
+        startCameraBtn.disabled = false;
+        let message = error.message || "Unable to open the camera.";
+        if (error.name === "NotAllowedError" || error.name === "SecurityError") message = "Camera permission was denied. Allow camera access in your browser settings.";
+        else if (error.name === "NotFoundError") message = "No camera was found. You can upload an image instead.";
+        else if (error.name === "NotReadableError") message = "The camera may be in use by another application.";
+        setStatus(cameraStatus, message, "error");
+      }
+    }
+
+    function ratioValue() {
+      const [width, height] = selectedRatio.split(":").map(Number);
+      return width / height;
+    }
+
+    function renderImage() {
+      if (!sourceImage) return false;
+      const sw = sourceImage.naturalWidth || sourceImage.videoWidth || sourceImage.width || 0;
+      const sh = sourceImage.naturalHeight || sourceImage.videoHeight || sourceImage.height || 0;
+      if (!sw || !sh) return false;
+
+      const targetRatio = ratioValue();
+      let cropWidth = sw;
+      let cropHeight = sh;
+      if (sw / sh > targetRatio) cropWidth = sh * targetRatio;
+      else cropHeight = sw / targetRatio;
+
+      const sx = (sw - cropWidth) / 2;
+      const sy = (sh - cropHeight) / 2;
+      canvas.width = Math.max(1, Math.round(cropWidth));
+      canvas.height = Math.max(1, Math.round(cropHeight));
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(sourceImage, sx, sy, cropWidth, cropHeight, 0, 0, canvas.width, canvas.height);
+      setImageReady(true);
+      resetQR();
+      return true;
+    }
+
+    function capturePhoto() {
+      if (!cameraStream || !video.videoWidth || !video.videoHeight) {
+        setStatus(cameraStatus, "Wait for the camera preview to become ready.", "error");
+        return;
+      }
+      const snapshot = document.createElement("canvas");
+      snapshot.width = video.videoWidth;
+      snapshot.height = video.videoHeight;
+      const snapshotCtx = snapshot.getContext("2d");
+      const track = cameraStream.getVideoTracks()[0];
+      const settings = track?.getSettings ? track.getSettings() : {};
+      const frontCamera = settings.facingMode ? settings.facingMode === "user" : facingMode === "user";
+      if (frontCamera) {
+        snapshotCtx.translate(snapshot.width, 0);
+        snapshotCtx.scale(-1, 1);
+      }
+      snapshotCtx.drawImage(video, 0, 0, snapshot.width, snapshot.height);
+      sourceImage = snapshot;
+      stopCamera();
+      renderImage();
+      retakeBtn.disabled = false;
+      setStatus(cameraStatus, "Photo captured! You can now crop, download, or create a QR code.", "success");
+    }
+
+    function loadFile(file) {
+      if (!file) return;
+      if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+        setStatus(cameraStatus, "Please select a JPG, PNG, or WebP image.", "error");
+        fileInput.value = "";
+        return;
+      }
+      const objectUrl = URL.createObjectURL(file);
+      const image = new Image();
+      image.onload = () => {
+        sourceImage = image;
+        stopCamera();
+        renderImage();
+        retakeBtn.disabled = true;
+        URL.revokeObjectURL(objectUrl);
+        setStatus(cameraStatus, "Image loaded. Choose a ratio, then download or generate a QR code.", "success");
+      };
+      image.onerror = () => {
+        URL.revokeObjectURL(objectUrl);
+        setStatus(cameraStatus, "This image could not be opened. Try another file.", "error");
+      };
+      image.src = objectUrl;
+    }
+
+    function exportBlob() {
+      const type = formatSelect.value;
+      const quality = Number(qualityInput.value) / 100;
+      return new Promise((resolve, reject) => {
+        canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error("Could not export this image.")), type, type === "image/png" ? undefined : quality);
+      });
+    }
+
+    function extensionFor(type) {
+      return ({ "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" })[type] || "jpg";
+    }
+
+    function saveBlob(blob, filename) {
+      const objectUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = objectUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(objectUrl), 1500);
+    }
+
+    async function downloadImage() {
+      if (!hasImage || !renderImage()) return;
+      try {
+        const blob = await exportBlob();
+        saveBlob(blob, `snapstudio-photo.${extensionFor(formatSelect.value)}`);
+        setStatus(cameraStatus, "Your image download has started.", "success");
+      } catch (error) {
+        setStatus(cameraStatus, error.message || "Image download failed.", "error");
+      }
+    }
+
+    async function uploadAndGenerateQR() {
+      if (!hasImage || !sourceImage) return;
+      if (API_BASE_URL.includes("YOUR_SUBDOMAIN")) {
+        setStatus(qrStatus, "Set API_BASE_URL in index.html to your deployed Worker URL first.", "error");
+        return;
+      }
+      if (typeof QRCode === "undefined") {
+        setStatus(qrStatus, "The QR-code library did not load. Check your internet connection and reload.", "error");
+        return;
+      }
+
+      isUploading = true;
+      generateQRBtn.disabled = true;
+      downloadQRBtn.disabled = true;
+      qrContainer.style.display = "none";
+      setStatus(qrStatus, "Preparing your processed image...");
+
+      try {
+        if (!renderImage()) throw new Error("The image preview is not ready.");
+        const blob = await exportBlob();
+        setStatus(qrStatus, "Uploading image to Cloudflare...");
+
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 60000);
+        let response;
+        try {
+          response = await fetch(`${API_BASE_URL.replace(/\/$/, "")}/api/images`, {
+            method: "POST",
+            headers: { "Content-Type": blob.type },
+            body: blob,
+            signal: controller.signal
+          });
+        } finally {
+          clearTimeout(timeoutId);
+        }
+
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok || !result.success || !result.downloadUrl) {
+          throw new Error(result.error || `Upload failed (HTTP ${response.status}). Check Worker configuration and allowed origins.`);
+        }
+
+        qrElement.replaceChildren();
+        new QRCode(qrElement, {
+          text: result.downloadUrl,
+          width: 230,
+          height: 230,
+          colorDark: "#000000",
+          colorLight: "#ffffff",
+          correctLevel: QRCode.CorrectLevel.M
+        });
+        qrContainer.style.display = "block";
+        downloadQRBtn.disabled = false;
+        const expiry = result.expiresAt ? new Date(result.expiresAt).toLocaleString() : "according to the Worker expiry setting";
+        setStatus(qrStatus, `QR code created! Scan it from another device. Link expires: ${expiry}.`, "success");
+      } catch (error) {
+        const message = error.name === "AbortError" ? "Upload timed out. Check your connection and try again." : (error.message || "Could not upload the image.");
+        setStatus(qrStatus, message, "error");
+      } finally {
+        isUploading = false;
+        generateQRBtn.disabled = !hasImage;
+      }
+    }
+
+    function downloadQRCode() {
+      const qrCanvas = qrElement.querySelector("canvas");
+      const qrImage = qrElement.querySelector("img");
+      let dataUrl = null;
+      if (qrCanvas) dataUrl = qrCanvas.toDataURL("image/png");
+      else if (qrImage?.src) dataUrl = qrImage.src;
+      if (!dataUrl) {
+        setStatus(qrStatus, "Generate a QR code first.", "error");
+        return;
+      }
+      const link = document.createElement("a");
+      link.href = dataUrl;
+      link.download = "snapstudio-download-qr.png";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    }
+
+    startCameraBtn.addEventListener("click", startCamera);
+    flipCameraBtn.addEventListener("click", async () => {
+      facingMode = facingMode === "user" ? "environment" : "user";
+      await startCamera();
     });
-    preview.srcObject = stream;
-    document.getElementById("flipBtn").disabled = false;
-    document.getElementById("captureBtn").disabled = false;
-    setStatus("Camera ready", "success");
-  } catch (err) {
-    console.error(err);
-    setStatus("Camera error: " + err.message, "error");
-  }
-}
-
-document.getElementById("startCameraBtn").addEventListener("click", startCamera);
-
-document.getElementById("flipBtn").addEventListener("click", () => {
-  facingMode = facingMode === "environment" ? "user" : "environment";
-  startCamera();
-});
-
-/* ========== CAPTURE / FILE ========== */
-function drawToCanvas(source, w, h) {
-  canvas.width = w;
-  canvas.height = h;
-  ctx.drawImage(source, 0, 0, w, h);
-  preview.style.display = "none";
-  canvas.style.display = "block";
-  photoReady = true;
-  sourceImage = canvas; // use canvas as source for re-renders
-  editControls.style.display = "flex";
-  generateQRBtn.disabled = false;
-  renderImage(); // initial render
-}
-
-document.getElementById("captureBtn").addEventListener("click", () => {
-  if (!preview.videoWidth) return;
-  drawToCanvas(preview, preview.videoWidth, preview.videoHeight);
-  setStatus("Photo captured — adjust crop & format", "success");
-});
-
-document.getElementById("fileInput").addEventListener("change", (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
-  const img = new Image();
-  img.onload = () => {
-    drawToCanvas(img, img.naturalWidth, img.naturalHeight);
-    setStatus("Image loaded — adjust crop & format", "success");
-  };
-  img.onerror = () => setStatus("Could not load image file", "error");
-  img.src = URL.createObjectURL(file);
-});
-
-/* ========== CROP / RENDER ========== */
-function getCropRect(sw, sh, ratioStr) {
-  const [rw, rh] = ratioStr.split(":").map(Number);
-  const target = rw / rh;
-  const src = sw / sh;
-  let cw, ch, cx, cy;
-  if (src > target) {
-    ch = sh;
-    cw = sh * target;
-    cx = (sw - cw) / 2;
-    cy = 0;
-  } else {
-    cw = sw;
-    ch = sw / target;
-    cx = 0;
-    cy = (sh - ch) / 2;
-  }
-  return { cx, cy, cw, ch };
-}
-
-function renderImage() {
-  if (!photoReady || !sourceImage) return;
-  const ratio = document.getElementById("ratioSelect").value;
-  const sw = sourceImage.width || sourceImage.videoWidth || sourceImage.naturalWidth;
-  const sh = sourceImage.height || sourceImage.videoHeight || sourceImage.naturalHeight;
-  const { cx, cy, cw, ch } = getCropRect(sw, sh, ratio);
-  canvas.width = Math.round(cw);
-  canvas.height = Math.round(ch);
-  ctx.drawImage(sourceImage, cx, cy, cw, ch, 0, 0, canvas.width, canvas.height);
-}
-
-document.getElementById("ratioSelect").addEventListener("change", renderImage);
-document.getElementById("formatSelect").addEventListener("change", () => { currentBlob = null; });
-qualitySlider.addEventListener("input", () => {
-  qualityValue.textContent = Number(qualitySlider.value).toFixed(2);
-  currentBlob = null;
-});
-
-function getImageBlob() {
-  return new Promise((resolve, reject) => {
-    if (!photoReady) return reject(new Error("No photo ready"));
-    const mime = document.getElementById("formatSelect").value;
-    const quality = Number(qualitySlider.value);
-    canvas.toBlob(blob => {
-      if (!blob) return reject(new Error("toBlob failed"));
-      resolve(blob);
-    }, mime, quality);
-  });
-}
-
-/* ========== DOWNLOAD ========== */
-downloadBtn.addEventListener("click", async () => {
-  try {
-    renderImage();
-    const blob = await getImageBlob();
-    revokeBlobUrl();
-    currentBlobUrl = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    const ext = document.getElementById("formatSelect").value.split("/")[1].replace("jpeg", "jpg");
-    a.href = currentBlobUrl;
-    a.download = `snapstudio-${Date.now()}.${ext}`;
-    a.click();
-    setStatus("Image downloaded", "success");
-  } catch (err) {
-    console.error(err);
-    setStatus("Download failed: " + err.message, "error");
-  }
-});
-
-/* ========== QR / UPLOAD ========== */
-async function uploadToCloudflare(blob, ext) {
-  setStatus("Requesting one-time upload URL from Cloudflare Worker…", "info");
-
-  const urlRes = await fetch(`${CF_WORKER_URL}/api/upload-url`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ contentType: blob.type })
-  });
-
-  if (!urlRes.ok) {
-    let errBody = await urlRes.text();
-    try { errBody = JSON.stringify(JSON.parse(errBody), null, 2); } catch (_) {}
-    throw new Error(`Requesting upload URL failed (${urlRes.status}): ${errBody}`);
-  }
-
-  const data = await urlRes.json();
-  if (!data.uploadURL || !data.publicURL) {
-    throw new Error("Worker response missing uploadURL or publicURL");
-  }
-
-  setStatus("Uploading image to Cloudflare…", "info");
-
-  const form = new FormData();
-  form.append("file", new File([blob], `snapstudio.${ext}`, { type: blob.type }));
-
-  const uploadRes = await fetch(data.uploadURL, { method: "POST", body: form });
-
-  if (!uploadRes.ok) {
-    let detail = `status ${uploadRes.status}`;
-    try {
-      const j = await uploadRes.json();
-      if (j.errors) detail += " — " + JSON.stringify(j.errors);
-    } catch (_) {}
-    throw new Error(`Cloudflare upload failed: ${detail}`);
-  }
-
-  return { publicURL: data.publicURL, provider: "Cloudflare Images" };
-}
-
-async function uploadToTemporaryHost(blob, ext) {
-  setStatus("Uploading to temporary host (demo mode)…", "info");
-
-  const form = new FormData();
-  form.append("file", new File([blob], `snapstudio.${ext}`, { type: blob.type }));
-
-  const res = await fetch("https://tmpfiles.org/api/v1/upload", {
-    method: "POST",
-    body: form
-  });
-
-  if (!res.ok) {
-    throw new Error(`Temporary upload failed (${res.status})`);
-  }
-
-  const data = await res.json();
-  if (data.status !== "success" || !data.data?.url) {
-    throw new Error("Temporary host returned an unexpected response");
-  }
-
-  // Convert page URL to direct download URL
-  const publicURL = data.data.url.replace("tmpfiles.org/", "tmpfiles.org/dl/");
-  return { publicURL, provider: "temporary host (tmpfiles.org)" };
-}
-
-function showQR(publicURL, provider) {
-  qrcodeEl.innerHTML = "";
-  try {
-    new QRCode(qrcodeEl, {
-      text: publicURL,
-      width: 220,
-      height: 220,
-      correctLevel: QRCode.CorrectLevel.M
+    captureBtn.addEventListener("click", capturePhoto);
+    retakeBtn.addEventListener("click", async () => {
+      sourceImage = null;
+      setImageReady(false);
+      resetQR();
+      retakeBtn.disabled = true;
+      await startCamera();
     });
-  } catch (err) {
-    console.error(err);
-    throw new Error("Failed to generate QR code: " + err.message);
-  }
+    fileInput.addEventListener("change", event => loadFile(event.target.files?.[0]));
 
-  const linkEl = document.getElementById("imageLink");
-  linkEl.href = publicURL;
-  linkEl.textContent = publicURL;
+    document.querySelectorAll(".ratio-btn").forEach(button => {
+      button.addEventListener("click", () => {
+        selectedRatio = button.dataset.ratio;
+        document.querySelectorAll(".ratio-btn").forEach(item => item.classList.toggle("active", item === button));
+        if (sourceImage) {
+          renderImage();
+          setStatus(cameraStatus, `Image cropped to ${selectedRatio}.`, "success");
+        }
+      });
+    });
 
-  const previewEl = document.getElementById("imagePreview");
-  previewEl.src = publicURL;
-  previewEl.style.display = "block";
-
-  qrContainer.style.display = "block";
-  downloadQRBtn.style.display = "inline-block";
-  downloadQRBtn.disabled = false;
-
-  // Scroll the QR into view so it's obvious on the page
-  qrContainer.scrollIntoView({ behavior: "smooth", block: "center" });
-
-  const note = provider.includes("temporary")
-    ? " (demo mode — link expires after about 1 hour)"
-    : "";
-
-  setStatus(
-    `QR code is now on the page. It links to the image on ${provider}${note}. Anyone who scans it (or opens the link) can view and download the image in Chrome or any browser.`,
-    "success"
-  );
-}
-
-async function generateQR() {
-  generateQRBtn.disabled = true;
-  retryUploadBtn.style.display = "none";
-  try {
-    if (!photoReady || !sourceImage) {
-      throw new Error("No photo is ready. Capture or upload an image first.");
-    }
-    if (typeof QRCode === "undefined") {
-      throw new Error("QRCode library failed to load. Check your network connection.");
-    }
-
-    renderImage();
-    const blob = await getImageBlob();
-    const ext = blob.type === "image/jpeg" ? "jpg" : blob.type.split("/")[1];
-
-    let result;
-    const useCloudflare = CF_WORKER_URL && CF_WORKER_URL !== "YOUR_WORKER_URL_HERE";
-
-    if (useCloudflare) {
-      result = await uploadToCloudflare(blob, ext);
-    } else {
-      result = await uploadToTemporaryHost(blob, ext);
-    }
-
-    showQR(result.publicURL, result.provider);
-  } catch (err) {
-    console.error(err);
-    setStatus(err.message || "Upload failed", "error");
-    retryUploadBtn.style.display = "inline-block";
-  } finally {
-    generateQRBtn.disabled = false;
-  }
-}
-
-generateQRBtn.addEventListener("click", generateQR);
-retryUploadBtn.addEventListener("click", generateQR);
-
-/* QR download */
-downloadQRBtn.addEventListener("click", () => {
-  const img = qrcodeEl.querySelector("img");
-  const canvas = qrcodeEl.querySelector("canvas");
-  const src = img ? img.src : (canvas ? canvas.toDataURL("image/png") : null);
-  if (!src) {
-    setStatus("Could not find QR image to download", "error");
-    return;
-  }
-  const a = document.createElement("a");
-  a.href = src;
-  a.download = `snapstudio-qr-${Date.now()}.png`;
-  a.click();
-});
-</script>
+    qualityInput.addEventListener("input", () => { qualityValue.textContent = `${qualityInput.value}%`; });
+    formatSelect.addEventListener("change", () => { if (hasImage) resetQR("Output format changed. Generate a new QR code when ready."); });
+    downloadImageBtn.addEventListener("click", downloadImage);
+    generateQRBtn.addEventListener("click", uploadAndGenerateQR);
+    downloadQRBtn.addEventListener("click", downloadQRCode);
+    window.addEventListener("beforeunload", () => {
+      if (cameraStream) cameraStream.getTracks().forEach(track => track.stop());
+    });
+  </script>
 </body>
 </html>
