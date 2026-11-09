@@ -5,7 +5,21 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#061640">
   <title>NEXTGEN Smart Classroom Photobooth</title>
-  
+
+  <script>
+    (function () {
+      try {
+        var saved = localStorage.getItem("nextgen-theme");
+        var prefersDark = window.matchMedia &&
+          window.matchMedia("(prefers-color-scheme: dark)").matches;
+        var theme = saved || (prefersDark ? "dark" : "light");
+        document.documentElement.setAttribute("data-theme", theme);
+      } catch (e) {
+        document.documentElement.setAttribute("data-theme", "light");
+      }
+    })();
+  </script>
+
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Orbitron:wght@500;600;700;800;900&display=swap');
 
@@ -30,6 +44,7 @@ body {
   background: radial-gradient(ellipse at top left, #d9edff, transparent 38%), var(--background);
   font-family: 'Inter', sans-serif;
   text-align: center;
+  transition: background-color 0.4s ease, color 0.4s ease;
 }
 
 button, input { font: inherit; }
@@ -88,8 +103,9 @@ button:disabled { opacity: .45 !important; cursor: not-allowed !important; trans
 .message-shake { animation: shake 0.4s ease-out; }
 .message-success { animation: success-bounce 0.6s ease-out; }
 
-.camera-section, .preview-section, .editor-workspace, .qrg-card {
-  transition: box-shadow 0.3s ease, transform 0.3s ease;
+.camera-section, .preview-section, .editor-workspace, .qrg-card, .tool-panel, .film, .qr-modal-content {
+  transition: box-shadow 0.3s ease, transform 0.3s ease,
+    background-color 0.4s ease, border-color 0.4s ease, color 0.4s ease;
 }
 .camera-section:hover, .preview-section:hover,
 .editor-workspace:hover, .qrg-card:hover {
@@ -120,6 +136,7 @@ button:disabled { opacity: .45 !important; cursor: not-allowed !important; trans
   margin: 0; word-break: break-all; user-select: all;
   padding: 8px 10px; background: #f8fbff;
   border-radius: 6px; border: 1px solid var(--border);
+  transition: background-color 0.4s ease, border-color 0.4s ease, color 0.4s ease;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1209,11 +1226,431 @@ input[type="range"] { width: 100%; height: 6px; accent-color: var(--blue); curso
   40%  { opacity: 1; transform: translate(-50%, -50%) scale(1.1); }
   100% { opacity: 0; transform: translate(-50%, -50%) scale(1.5); }
 }
+
+/* ============================================================
+   THEME TOGGLE BUTTON
+   ============================================================ */
+
+.theme-toggle {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 9999;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  line-height: 1;
+  box-shadow: 0 4px 16px rgba(6, 22, 64, 0.18);
+  transition: transform 0.25s ease, box-shadow 0.25s ease,
+    background-color 0.4s ease, border-color 0.4s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.theme-toggle:hover {
+  transform: scale(1.1) rotate(15deg);
+  box-shadow: 0 6px 24px rgba(6, 22, 64, 0.28);
+}
+.theme-toggle:active {
+  transform: scale(0.94);
+}
+.theme-toggle:focus-visible {
+  outline: 3px solid var(--cyan);
+  outline-offset: 3px;
+}
+.theme-icon {
+  display: block;
+  transition: transform 0.4s ease;
+}
+
+@media (max-width: 640px) {
+  .theme-toggle {
+    top: 14px;
+    right: 14px;
+    width: 42px;
+    height: 42px;
+    font-size: 19px;
+  }
+}
+
+/* ============================================================
+   DARK MODE
+   ============================================================ */
+
+html[data-theme="dark"] {
+  --navy: #04081a;
+  --navy-light: #0a1430;
+  --blue: #4a9dff;
+  --electric: #4db8ff;
+  --cyan: #19d4ff;
+  --background: #0a1020;
+  --ink: #e8ecf5;
+  --muted: #8a9bbf;
+  --border: #2a3550;
+}
+
+html[data-theme="dark"] body {
+  background:
+    radial-gradient(ellipse at top left, #1a2c50, transparent 38%),
+    var(--background);
+  color: var(--ink);
+}
+
+html[data-theme="dark"] .theme-toggle {
+  background: #1a2238;
+  border-color: #2a3550;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+}
+html[data-theme="dark"] .theme-toggle:hover {
+  background: #202a44;
+  box-shadow: 0 6px 26px rgba(0, 0, 0, 0.65);
+}
+
+html[data-theme="dark"] .camera-section,
+html[data-theme="dark"] .preview-section,
+html[data-theme="dark"] .editor-workspace,
+html[data-theme="dark"] .qrg-card,
+html[data-theme="dark"] .tool-panel {
+  background: #1a2238;
+  border-color: #2a3550;
+  color: #e8ecf5;
+}
+
+html[data-theme="dark"] .film {
+  background: #1a2238;
+  border-color: #2a3550;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.55);
+}
+html[data-theme="dark"] .film-brand-text strong,
+html[data-theme="dark"] .film-caption p {
+  color: #e8ecf5;
+}
+html[data-theme="dark"] .film-caption span {
+  color: #8a9bbf;
+}
+html[data-theme="dark"] .film-image {
+  background: #0f1830;
+}
+html[data-theme="dark"] .film-image .preview-placeholder {
+  background: #0f1830;
+  color: #8a9bbf;
+}
+html[data-theme="dark"] .film-brand {
+  border-bottom-color: #4db8ff;
+}
+html[data-theme="dark"] .film-footer {
+  border-top-color: #4db8ff;
+  color: #4a9dff;
+}
+
+html[data-theme="dark"] .section-heading h2,
+html[data-theme="dark"] .tool-panel h3,
+html[data-theme="dark"] .qrg-card h2 {
+  color: #4a9dff;
+}
+html[data-theme="dark"] .section-heading p,
+html[data-theme="dark"] .tool-description,
+html[data-theme="dark"] .qrg-muted {
+  color: #8a9bbf;
+}
+
+html[data-theme="dark"] .grid-heading label,
+html[data-theme="dark"] .print-controls label,
+html[data-theme="dark"] .range-label {
+  color: #e8ecf5;
+}
+html[data-theme="dark"] .range-label span {
+  color: #4a9dff;
+}
+
+html[data-theme="dark"] .camera-frame {
+  background: #060d1e;
+  border-color: #2a3550;
+}
+html[data-theme="dark"] .placeholder {
+  background: linear-gradient(145deg, #1a2238, #0f1830);
+}
+html[data-theme="dark"] .placeholder h3 {
+  color: #e8ecf5;
+}
+html[data-theme="dark"] .placeholder p {
+  color: #8a9bbf;
+}
+
+html[data-theme="dark"] .grid-option,
+html[data-theme="dark"] .timer-option {
+  background: #131b33;
+  border-color: #2a3550;
+  color: #e8ecf5;
+}
+html[data-theme="dark"] .grid-option small,
+html[data-theme="dark"] .timer-option span {
+  color: #8a9bbf;
+}
+html[data-theme="dark"] .grid-option.selected,
+html[data-theme="dark"] .timer-option.selected {
+  background: #1e3a6a;
+  border-color: #4a9dff;
+}
+html[data-theme="dark"] .grid-option:hover:not(:disabled),
+html[data-theme="dark"] .timer-option:hover:not(:disabled) {
+  border-color: #4a9dff;
+}
+html[data-theme="dark"] .grid-icon {
+  background: #0a1224;
+}
+
+html[data-theme="dark"] .ratio-option {
+  background: #131b33;
+  border-color: #2a3550;
+}
+html[data-theme="dark"] .ratio-option strong {
+  color: #4a9dff;
+}
+html[data-theme="dark"] .ratio-option small {
+  color: #8a9bbf;
+}
+html[data-theme="dark"] .ratio-option.selected {
+  background: #1e3a6a;
+  border-color: #4a9dff;
+}
+html[data-theme="dark"] .ratio-option:hover:not(:disabled) {
+  border-color: #4a9dff;
+}
+
+html[data-theme="dark"] .progress-track {
+  background: #131b33;
+}
+html[data-theme="dark"] .step {
+  color: #8a9bbf;
+  border-color: #2a3550;
+}
+html[data-theme="dark"] .step.active {
+  color: #19d4ff;
+  border-color: #19d4ff70;
+  background: #19d4ff12;
+}
+
+html[data-theme="dark"] .button.secondary,
+html[data-theme="dark"] .capture-button {
+  background: #1e2840;
+  border-color: #2a3550;
+  color: #e8ecf5;
+}
+html[data-theme="dark"] .button.secondary:hover:not(:disabled) {
+  background: #253050;
+}
+
+html[data-theme="dark"] .cancel-button {
+  color: #ff9999;
+  background: #3d1418;
+  border-color: #5a2028;
+}
+
+html[data-theme="dark"] .print-controls input,
+html[data-theme="dark"] .editor-caption-input,
+html[data-theme="dark"] .editor-select,
+html[data-theme="dark"] .editor-color-input,
+html[data-theme="dark"] .qrg-input {
+  background: #0f1830;
+  border-color: #2a3550;
+  color: #e8ecf5;
+}
+html[data-theme="dark"] .print-controls input::placeholder,
+html[data-theme="dark"] .editor-caption-input::placeholder,
+html[data-theme="dark"] .qrg-input::placeholder {
+  color: #5a6a8a;
+}
+
+html[data-theme="dark"] .editor-canvas-wrap {
+  background: #0f1830;
+  border-color: #2a3550;
+}
+html[data-theme="dark"] .editor-empty {
+  background: #0f1830;
+}
+html[data-theme="dark"] .editor-empty h3 {
+  color: #e8ecf5;
+}
+html[data-theme="dark"] .editor-empty p {
+  color: #8a9bbf;
+}
+
+html[data-theme="dark"] .filter-option {
+  color: #e8ecf5;
+}
+html[data-theme="dark"] .filter-option.selected {
+  background: #1e3a6a;
+  border-color: #4a9dff;
+}
+
+html[data-theme="dark"] .sticker-option {
+  background: #131b33;
+  border-color: #2a3550;
+}
+html[data-theme="dark"] .sticker-option:hover,
+html[data-theme="dark"] .sticker-option.selected {
+  background: #1e3a6a;
+  border-color: #4a9dff;
+}
+
+html[data-theme="dark"] .privacy {
+  background: #131b33;
+  border-color: #2a3550;
+  color: #8a9bbf;
+}
+
+html[data-theme="dark"] .qr-modal-content {
+  background: #1a2238;
+  color: #e8ecf5;
+}
+html[data-theme="dark"] .qr-modal-content h3 {
+  color: #4a9dff;
+}
+html[data-theme="dark"] .qr-modal-content > p {
+  color: #8a9bbf;
+}
+html[data-theme="dark"] .qr-close {
+  background: #131b33;
+  color: #e8ecf5;
+}
+html[data-theme="dark"] .qr-close:hover {
+  background: #1e2840;
+}
+html[data-theme="dark"] #qrContainer {
+  background: #0a1224;
+  border-color: #2a3550;
+}
+html[data-theme="dark"] #qrcode {
+  background: white;
+}
+html[data-theme="dark"] .qr-url-text {
+  background: #0f1830;
+  border-color: #2a3550;
+  color: #4a9dff;
+}
+html[data-theme="dark"] .qr-actions .button.secondary {
+  background: #1e2840;
+  border-color: #2a3550;
+  color: #e8ecf5;
+}
+html[data-theme="dark"] #qrStatus {
+  color: #8a9bbf;
+}
+
+html[data-theme="dark"] .qrg-tab {
+  background: #131b33;
+  border-color: #2a3550;
+  color: #e8ecf5;
+}
+html[data-theme="dark"] .qrg-tab.is-active {
+  background: #1e3a6a;
+  border-color: #4a9dff;
+  color: #7dc4ff;
+}
+html[data-theme="dark"] .qrg-dropzone {
+  background: #131b33;
+  border-color: #2a3550;
+  color: #e8ecf5;
+}
+html[data-theme="dark"] .qrg-dropzone:hover,
+html[data-theme="dark"] .qrg-dropzone.is-dragover {
+  background: #1e2840;
+  border-color: #4a9dff;
+}
+html[data-theme="dark"] .qrg-dropzone-title {
+  color: #e8ecf5;
+}
+html[data-theme="dark"] .qrg-dropzone-hint {
+  color: #8a9bbf;
+}
+html[data-theme="dark"] .qrg-dropzone-icon {
+  color: #4a9dff;
+}
+html[data-theme="dark"] .qrg-preview {
+  background: #0f1830;
+  border-color: #2a3550;
+}
+html[data-theme="dark"] .qrg-preview-empty {
+  color: #8a9bbf;
+}
+html[data-theme="dark"] .qrg-preview-empty span {
+  color: #4a9dff;
+}
+html[data-theme="dark"] .qrg-qr-stage {
+  background: #131b33;
+  border-color: #2a3550;
+}
+html[data-theme="dark"] .qrg-qr-container {
+  background: white;
+}
+html[data-theme="dark"] .qrg-qr-empty {
+  color: #8a9bbf;
+}
+html[data-theme="dark"] .qrg-target {
+  background: #1a2c50;
+  color: #7dc4ff;
+}
+html[data-theme="dark"] .qrg-meta-row {
+  border-bottom-color: #2a3550;
+}
+html[data-theme="dark"] .qrg-meta-row dd {
+  color: #e8ecf5;
+}
+html[data-theme="dark"] .qrg-meta-row dt {
+  color: #8a9bbf;
+}
+html[data-theme="dark"] .qrg-checkbox {
+  color: #e8ecf5;
+}
+html[data-theme="dark"] .qrg-help {
+  color: #8a9bbf;
+}
+html[data-theme="dark"] .qrg-label {
+  color: #e8ecf5;
+}
+html[data-theme="dark"] .qrg-note {
+  color: #8a9bbf;
+}
+
+html[data-theme="dark"] .qrg-message-status {
+  color: #7dc4ff;
+  background: #1a2c50;
+}
+html[data-theme="dark"] .qrg-message-success {
+  color: #81e6b2;
+  background: #0f3324;
+}
+html[data-theme="dark"] .qrg-message-warning {
+  color: #f5dba5;
+  background: #3a2a0f;
+}
+html[data-theme="dark"] .qrg-message-error {
+  color: #ff9999;
+  background: #3d1418;
+}
+
+html[data-theme="dark"] .qrg-preview-img {
+  background: #0a1224;
+}
+
+html[data-theme="dark"] .site-footer {
+  background: #04081a;
+}
 </style>
 </head>
 <body>
 
-  <!-- Camera shutter overlay -->
+  <button id="themeToggle" class="theme-toggle" type="button"
+          aria-label="Toggle theme" title="Toggle dark/light mode">
+    <span class="theme-icon">🌙</span>
+  </button>
+
   <div id="shutterOverlay" class="shutter-overlay" aria-hidden="true">
     <div class="shutter-panel shutter-top"></div>
     <div class="shutter-panel shutter-bottom"></div>
@@ -1945,9 +2382,6 @@ document.addEventListener("DOMContentLoaded", () => {
     typePageSubtitle(target);
   }
 
-  /* ============================================================
-     CAMERA SHUTTER TRANSITION
-     ============================================================ */
   async function runShutterTransition(targetPageId) {
     const overlay = document.getElementById("shutterOverlay");
     const btn = document.getElementById("enterBooth");
@@ -1961,28 +2395,18 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (btn) btn.disabled = true;
 
-    // Reset any leftover state
     overlay.classList.remove("opening", "flashing", "closing");
     overlay.classList.add("active", "closing");
 
-    // Let the curtains close
     await wait(310);
-
-    // Swap the page while the screen is covered
     showPage(targetPageId);
-
-    // Flash effect
     overlay.classList.add("flashing");
 
     await wait(180);
-
-    // Open curtains to reveal new page
     overlay.classList.remove("closing");
     overlay.classList.add("opening");
 
     await wait(420);
-
-    // Clean up
     overlay.classList.remove("active", "opening", "flashing");
 
     if (btn) btn.disabled = false;
@@ -3371,7 +3795,7 @@ document.addEventListener("DOMContentLoaded", () => {
       let url;
       try { url = new URL(raw); } catch { return { ok: false, message: "That is not a valid URL." }; }
       if (!/^https?:$/.test(url.protocol)) {
-        return { ok: false, message: "Use an http:// or https:// URL. Local files and blob URLs cannot be scanned." };
+        return { ok: false, message: "Use an http:// or https:// URL." };
       }
       if (/\.(html?|php|aspx?)$/i.test(url.pathname)) {
         return { ok: false, message: "This URL looks like a web page, not a direct image file." };
@@ -3925,6 +4349,56 @@ document.addEventListener("DOMContentLoaded", () => {
     document.addEventListener("DOMContentLoaded", initBubbles);
   } else {
     initBubbles();
+  }
+})();
+</script>
+
+<script>
+(function () {
+  "use strict";
+
+  function updateIcon(theme) {
+    const icon = document.querySelector(".theme-icon");
+    if (icon) icon.textContent = theme === "dark" ? "☀️" : "🌙";
+  }
+
+  function applyTheme(theme) {
+    document.documentElement.setAttribute("data-theme", theme);
+    try { localStorage.setItem("nextgen-theme", theme); } catch (e) {}
+    updateIcon(theme);
+  }
+
+  function init() {
+    const toggle = document.getElementById("themeToggle");
+    if (!toggle) return;
+
+    updateIcon(document.documentElement.getAttribute("data-theme") || "light");
+
+    toggle.addEventListener("click", () => {
+      const current = document.documentElement.getAttribute("data-theme") || "light";
+      applyTheme(current === "dark" ? "light" : "dark");
+    });
+
+    if (window.matchMedia) {
+      const mql = window.matchMedia("(prefers-color-scheme: dark)");
+      const handler = (e) => {
+        let saved = null;
+        try { saved = localStorage.getItem("nextgen-theme"); } catch (err) {}
+        if (!saved) {
+          const next = e.matches ? "dark" : "light";
+          document.documentElement.setAttribute("data-theme", next);
+          updateIcon(next);
+        }
+      };
+      if (mql.addEventListener) mql.addEventListener("change", handler);
+      else if (mql.addListener) mql.addListener(handler);
+    }
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", init);
+  } else {
+    init();
   }
 })();
 </script>
