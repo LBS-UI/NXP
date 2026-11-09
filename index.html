@@ -1049,9 +1049,178 @@ input[type="range"] { width: 100%; height: 6px; accent-color: var(--blue); curso
   .qrg-card { padding: 16px; }
   .qrg-row { grid-template-columns: 1fr; }
 }
+
+/* ============================================================
+   ANIMATED INTERACTIVE BUBBLES IN HEADERS
+   ============================================================ */
+
+.header-bubbles {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.header .eyebrow,
+.header .brand-label,
+.header h1,
+.header .subtitle,
+.header .header-line,
+.header .page-indicator {
+  position: relative;
+  z-index: 1;
+}
+
+/* ============================================================
+   CAMERA SHUTTER TRANSITION (START NOW button)
+   ============================================================ */
+
+.shutter-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  pointer-events: none;
+  display: none;
+  overflow: hidden;
+}
+.shutter-overlay.active {
+  display: block;
+}
+.shutter-panel {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  height: 50.5%;
+  background:
+    radial-gradient(ellipse at center, rgba(25, 212, 255, 0.08) 0%, transparent 70%),
+    linear-gradient(180deg, #010612 0%, #061640 55%, #0b2863 100%);
+  will-change: transform;
+  transition: transform 0.3s cubic-bezier(0.77, 0, 0.175, 1);
+  overflow: hidden;
+}
+.shutter-panel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    repeating-linear-gradient(
+      45deg,
+      rgba(25, 212, 255, 0.05) 0px,
+      rgba(25, 212, 255, 0.05) 1px,
+      transparent 1px,
+      transparent 8px
+    );
+  pointer-events: none;
+}
+.shutter-top {
+  top: 0;
+  transform: translateY(-100%);
+  border-bottom: 2px solid var(--cyan);
+  box-shadow:
+    0 8px 40px rgba(25, 212, 255, 0.55),
+    inset 0 -30px 60px rgba(0, 0, 0, 0.7);
+}
+.shutter-bottom {
+  bottom: 0;
+  transform: translateY(100%);
+  border-top: 2px solid var(--cyan);
+  box-shadow:
+    0 -8px 40px rgba(25, 212, 255, 0.55),
+    inset 0 30px 60px rgba(0, 0, 0, 0.7);
+}
+.shutter-overlay.closing .shutter-top,
+.shutter-overlay.closing .shutter-bottom {
+  transform: translateY(0);
+}
+.shutter-overlay.opening .shutter-panel {
+  transition: transform 0.36s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.shutter-overlay.opening .shutter-top {
+  transform: translateY(-100%);
+}
+.shutter-overlay.opening .shutter-bottom {
+  transform: translateY(100%);
+}
+.shutter-seam {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--cyan);
+  box-shadow:
+    0 0 20px rgba(25, 212, 255, 0.9),
+    0 0 40px rgba(25, 212, 255, 0.5),
+    0 0 60px rgba(25, 212, 255, 0.3);
+  opacity: 0;
+  transform: translateY(-50%) scaleX(0);
+  transition:
+    opacity 0.15s ease-out 0.18s,
+    transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) 0.1s;
+}
+.shutter-overlay.closing .shutter-seam {
+  opacity: 1;
+  transform: translateY(-50%) scaleX(1);
+}
+.shutter-overlay.opening .shutter-seam {
+  opacity: 0;
+  transition: opacity 0.1s ease-out;
+}
+.shutter-flash {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at center, #ffffff 0%, #c8f6ff 45%, rgba(200, 246, 255, 0) 100%);
+  opacity: 0;
+  pointer-events: none;
+  mix-blend-mode: screen;
+}
+.shutter-overlay.flashing .shutter-flash {
+  animation: shutterFlash 0.36s ease-out;
+}
+@keyframes shutterFlash {
+  0%   { opacity: 0; }
+  20%  { opacity: 0.95; }
+  45%  { opacity: 0.7; }
+  100% { opacity: 0; }
+}
+.shutter-aperture {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 100px;
+  height: 100px;
+  transform: translate(-50%, -50%) scale(0.3);
+  border-radius: 50%;
+  border: 3px solid var(--cyan);
+  box-shadow:
+    0 0 25px rgba(25, 212, 255, 0.9),
+    inset 0 0 25px rgba(25, 212, 255, 0.5);
+  opacity: 0;
+  pointer-events: none;
+}
+.shutter-overlay.closing .shutter-aperture {
+  animation: aperturePulse 0.4s ease-out 0.12s;
+}
+@keyframes aperturePulse {
+  0%   { opacity: 0; transform: translate(-50%, -50%) scale(0.3); }
+  40%  { opacity: 1; transform: translate(-50%, -50%) scale(1.1); }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(1.5); }
+}
 </style>
 </head>
 <body>
+
+  <!-- Camera shutter overlay -->
+  <div id="shutterOverlay" class="shutter-overlay" aria-hidden="true">
+    <div class="shutter-panel shutter-top"></div>
+    <div class="shutter-panel shutter-bottom"></div>
+    <div class="shutter-seam"></div>
+    <div class="shutter-aperture"></div>
+    <div class="shutter-flash"></div>
+  </div>
 
   <section id="welcomePage" class="page welcome-page active">
     <div class="welcome-glow"></div>
@@ -1645,315 +1814,13 @@ input[type="range"] { width: 100%; height: 6px; accent-color: var(--blue); curso
 
 <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 
-
-<script>
-(function () {
-  "use strict";
-
-  const reducedMotion =
-    window.matchMedia &&
-    window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
-  if (reducedMotion) return;
-
-  function initBubbles() {
-    document.querySelectorAll(".header").forEach(setupHeader);
-  }
-
-  function setupHeader(header) {
-    if (header.dataset.bubblesInit === "1") return;
-    header.dataset.bubblesInit = "1";
-
-    const canvas = document.createElement("canvas");
-    canvas.className = "header-bubbles";
-    canvas.setAttribute("aria-hidden", "true");
-    header.insertBefore(canvas, header.firstChild);
-
-    const ctx = canvas.getContext("2d");
-    const state = {
-      canvas, ctx,
-      w: 0, h: 0,
-      bubbles: [],
-      pops: [],
-      mouse: { x: -9999, y: -9999, active: false },
-      running: false,
-      lastTime: 0
-    };
-
-    // ---------- Bubble ----------
-    class Bubble {
-      constructor(x, y, opts = {}) {
-        this.x = x != null ? x : Math.random() * state.w;
-        this.y = y != null ? y : Math.random() * state.h;
-        this.r = opts.r != null ? opts.r : 3 + Math.random() * 20;
-        this.vx = opts.vx != null ? opts.vx : (Math.random() - 0.5) * 0.35;
-        this.vy = opts.vy != null ? opts.vy : -0.35 - Math.random() * 0.75;
-        this.alpha = opts.alpha != null ? opts.alpha : 0.12 + Math.random() * 0.38;
-        this.pulse = Math.random() * Math.PI * 2;
-        this.pulseSpeed = 0.015 + Math.random() * 0.025;
-      }
-
-      update(dt) {
-        const k = dt * 60;
-        this.y += this.vy * k;
-        this.x += this.vx * k;
-
-        if (state.mouse.active) {
-          const dx = this.x - state.mouse.x;
-          const dy = this.y - state.mouse.y;
-          const d2 = dx * dx + dy * dy;
-          const infl = 140 + this.r;
-          if (d2 < infl * infl && d2 > 0.5) {
-            const d = Math.sqrt(d2);
-            const force = (infl - d) / infl;
-            this.x += (dx / d) * force * 2.6;
-            this.y += (dy / d) * force * 2.6;
-          }
-        }
-
-        this.pulse += this.pulseSpeed;
-
-        if (this.y + this.r < -10) {
-          this.y = state.h + this.r;
-          this.x = Math.random() * state.w;
-        }
-        if (this.x < -this.r - 20) this.x = state.w + this.r + 20;
-        if (this.x > state.w + this.r + 20) this.x = -this.r - 20;
-      }
-
-      draw() {
-        let a = this.alpha * (0.65 + 0.35 * Math.sin(this.pulse));
-
-        if (state.mouse.active) {
-          const dx = this.x - state.mouse.x;
-          const dy = this.y - state.mouse.y;
-          const d2 = dx * dx + dy * dy;
-          if (d2 < 10000) {
-            const d = Math.sqrt(d2);
-            a += (1 - d / 100) * 0.45;
-          }
-        }
-
-        // Soft fill
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(25, 212, 255, ${a * 0.16})`;
-        ctx.fill();
-
-        // Rim
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2);
-        ctx.strokeStyle = `rgba(200, 240, 255, ${a * 0.75})`;
-        ctx.lineWidth = 1.1;
-        ctx.stroke();
-
-        // Highlight
-        if (this.r > 5) {
-          ctx.beginPath();
-          ctx.arc(
-            this.x - this.r * 0.35,
-            this.y - this.r * 0.35,
-            Math.max(1, this.r * 0.14),
-            0, Math.PI * 2
-          );
-          ctx.fillStyle = `rgba(255, 255, 255, ${a * 0.9})`;
-          ctx.fill();
-        }
-      }
-    }
-
-    // ---------- Sizing ----------
-    function sizeCanvas() {
-      const rect = header.getBoundingClientRect();
-      if (rect.width === 0 || rect.height === 0) {
-        state.running = false;
-        return;
-      }
-
-      const dpr = window.devicePixelRatio || 1;
-      state.w = rect.width;
-      state.h = rect.height;
-
-      canvas.width = Math.round(rect.width * dpr);
-      canvas.height = Math.round(rect.height * dpr);
-      canvas.style.width = rect.width + "px";
-      canvas.style.height = rect.height + "px";
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-
-      const target = Math.max(
-        14,
-        Math.min(48, Math.floor((rect.width * rect.height) / 7000))
-      );
-      while (state.bubbles.length < target) state.bubbles.push(new Bubble());
-      while (state.bubbles.length > target) state.bubbles.pop();
-
-      state.bubbles.forEach((b) => {
-        if (b.x > rect.width + b.r) b.x = rect.width + b.r;
-        if (b.y > rect.height + b.r) b.y = rect.height + b.r;
-        if (b.y < -b.r) b.y = -b.r;
-      });
-
-      if (!state.running) {
-        state.running = true;
-        state.lastTime = performance.now();
-        requestAnimationFrame(tick);
-      }
-    }
-
-    // ---------- Burst on click / tap ----------
-    function burst(x, y) {
-      state.pops.push({ x, y, r: 6, life: 1 });
-
-      const radius = 75;
-      const r2 = radius * radius;
-      for (let i = state.bubbles.length - 1; i >= 0; i--) {
-        const b = state.bubbles[i];
-        const dx = b.x - x, dy = b.y - y;
-        if (dx * dx + dy * dy < r2) state.bubbles.splice(i, 1);
-      }
-
-      const n = 8;
-      for (let i = 0; i < n; i++) {
-        const angle = (i / n) * Math.PI * 2 + Math.random() * 0.35;
-        const speed = 1.4 + Math.random() * 2.4;
-        state.bubbles.push(
-          new Bubble(x, y, {
-            r: 2.5 + Math.random() * 5,
-            vx: Math.cos(angle) * speed,
-            vy: Math.sin(angle) * speed,
-            alpha: 0.6 + Math.random() * 0.35
-          })
-        );
-      }
-
-      while (state.bubbles.length > 65) state.bubbles.shift();
-    }
-
-    // ---------- Animation loop ----------
-    function tick(now) {
-      if (!state.running) return;
-
-      const rect = header.getBoundingClientRect();
-      if (rect.width === 0 || rect.height === 0) {
-        state.running = false;
-        return;
-      }
-
-      const dt = Math.min(0.05, (now - state.lastTime) / 1000);
-      state.lastTime = now;
-
-      ctx.clearRect(0, 0, state.w, state.h);
-
-      for (let i = 0; i < state.bubbles.length; i++) {
-        const b = state.bubbles[i];
-        b.update(dt);
-        b.draw();
-      }
-
-      for (let i = state.pops.length - 1; i >= 0; i--) {
-        const p = state.pops[i];
-        p.r += 4.5;
-        p.life -= 0.045;
-
-        if (p.life <= 0) {
-          state.pops.splice(i, 1);
-          continue;
-        }
-
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-        ctx.strokeStyle = `rgba(25, 212, 255, ${p.life * 0.8})`;
-        ctx.lineWidth = 2.2 * p.life;
-        ctx.stroke();
-
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.r * 0.65, 0, Math.PI * 2);
-        ctx.strokeStyle = `rgba(220, 245, 255, ${p.life * 0.45})`;
-        ctx.lineWidth = 1.4 * p.life;
-        ctx.stroke();
-      }
-
-      requestAnimationFrame(tick);
-    }
-
-    // ---------- Interaction ----------
-    function isInteractive(el) {
-      return el && el.closest &&
-        el.closest("button, a, input, select, textarea, [role='button']");
-    }
-
-    header.addEventListener("mousemove", (e) => {
-      const rect = header.getBoundingClientRect();
-      state.mouse.x = e.clientX - rect.left;
-      state.mouse.y = e.clientY - rect.top;
-      state.mouse.active = true;
-    }, { passive: true });
-
-    header.addEventListener("mouseleave", () => {
-      state.mouse.active = false;
-      state.mouse.x = -9999;
-      state.mouse.y = -9999;
-    });
-
-    header.addEventListener("click", (e) => {
-      if (isInteractive(e.target)) return;
-      const rect = header.getBoundingClientRect();
-      burst(e.clientX - rect.left, e.clientY - rect.top);
-    });
-
-    header.addEventListener("touchstart", (e) => {
-      const t = e.touches[0];
-      if (!t) return;
-      const rect = header.getBoundingClientRect();
-      state.mouse.x = t.clientX - rect.left;
-      state.mouse.y = t.clientY - rect.top;
-      state.mouse.active = true;
-      if (!isInteractive(e.target)) {
-        burst(state.mouse.x, state.mouse.y);
-      }
-    }, { passive: true });
-
-    header.addEventListener("touchmove", (e) => {
-      const t = e.touches[0];
-      if (!t) return;
-      const rect = header.getBoundingClientRect();
-      state.mouse.x = t.clientX - rect.left;
-      state.mouse.y = t.clientY - rect.top;
-      state.mouse.active = true;
-    }, { passive: true });
-
-    ["touchend", "touchcancel"].forEach((evt) => {
-      header.addEventListener(evt, () => {
-        state.mouse.active = false;
-      }, { passive: true });
-    });
-
-    // ---------- Resize ----------
-    if ("ResizeObserver" in window) {
-      const ro = new ResizeObserver(() => sizeCanvas());
-      ro.observe(header);
-    } else {
-      window.addEventListener("resize", sizeCanvas);
-    }
-
-    sizeCanvas();
-  }
-
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", initBubbles);
-  } else {
-    initBubbles();
-  }
-})();
-</script>
-
 <script>
 "use strict";
 
 document.addEventListener("DOMContentLoaded", () => {
   const $ = id => document.getElementById(id);
 
-  const CF_WORKER_URL = "YOUR_WORKER_URL_HERE"; // set to your Worker URL to enable Cloudflare uploads
+  const CF_WORKER_URL = "YOUR_WORKER_URL_HERE";
 
   const pages = document.querySelectorAll(".page");
   const typedSubtitles = new WeakSet();
@@ -2078,7 +1945,50 @@ document.addEventListener("DOMContentLoaded", () => {
     typePageSubtitle(target);
   }
 
-  $("enterBooth").addEventListener("click", () => showPage("boothPage"));
+  /* ============================================================
+     CAMERA SHUTTER TRANSITION
+     ============================================================ */
+  async function runShutterTransition(targetPageId) {
+    const overlay = document.getElementById("shutterOverlay");
+    const btn = document.getElementById("enterBooth");
+    const reduced = window.matchMedia &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    if (!overlay || reduced) {
+      showPage(targetPageId);
+      return;
+    }
+
+    if (btn) btn.disabled = true;
+
+    // Reset any leftover state
+    overlay.classList.remove("opening", "flashing", "closing");
+    overlay.classList.add("active", "closing");
+
+    // Let the curtains close
+    await wait(310);
+
+    // Swap the page while the screen is covered
+    showPage(targetPageId);
+
+    // Flash effect
+    overlay.classList.add("flashing");
+
+    await wait(180);
+
+    // Open curtains to reveal new page
+    overlay.classList.remove("closing");
+    overlay.classList.add("opening");
+
+    await wait(420);
+
+    // Clean up
+    overlay.classList.remove("active", "opening", "flashing");
+
+    if (btn) btn.disabled = false;
+  }
+
+  $("enterBooth").addEventListener("click", () => runShutterTransition("boothPage"));
   document.querySelectorAll("[data-page]").forEach(button => {
     button.addEventListener("click", () => showPage(button.dataset.page));
   });
@@ -2295,11 +2205,11 @@ document.addEventListener("DOMContentLoaded", () => {
   async function startCamera() {
     if (cameraReady || busy) return;
     if (!window.isSecureContext) {
-      updateStatus("Camera needs HTTPS or localhost. If you opened the file directly, serve it with a local server or deploy to GitHub Pages. You can still use Photo Studio on phones via HTTPS.");
+      updateStatus("Camera needs HTTPS or localhost.");
       return;
     }
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      updateStatus("This browser does not support camera access. Try Chrome, Firefox, Edge or Safari.");
+      updateStatus("This browser does not support camera access.");
       return;
     }
     if (stream) {
@@ -2312,39 +2222,28 @@ document.addEventListener("DOMContentLoaded", () => {
     try {
       newStream = await navigator.mediaDevices.getUserMedia({
         audio: false,
-        video: {
-          facingMode: { ideal: "user" },
-          width: { ideal: 1280 },
-          height: { ideal: 960 }
-        }
+        video: { facingMode: { ideal: "user" }, width: { ideal: 1280 }, height: { ideal: 960 } }
       });
     } catch (firstErr) {
-      console.warn("Preferred camera constraints failed:", firstErr && firstErr.name);
       try {
-        newStream = await navigator.mediaDevices.getUserMedia({
-          video: true,
-          audio: false
-        });
+        newStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
       } catch (secondErr) {
         console.error(secondErr);
         const err = secondErr;
         let msg = err.message || "Unknown camera error";
         if (err.name === "NotAllowedError" || err.name === "SecurityError") {
-          msg = "Camera permission was denied. Click the camera/lock icon in your browser's address bar, choose 'Allow', then click Start Camera again.";
+          msg = "Camera permission was denied.";
         } else if (err.name === "NotFoundError" || err.name === "OverconstrainedError") {
           msg = "No usable camera found on this device.";
         } else if (err.name === "NotReadableError") {
-          msg = "The camera is being used by another app (Zoom, Teams, etc.). Close that app, then click Start Camera again.";
+          msg = "The camera is being used by another app.";
         }
         updateStatus("Camera error: " + msg);
         startButton.disabled = false;
         return;
       }
     }
-    if (disposed) {
-      newStream.getTracks().forEach(track => track.stop());
-      return;
-    }
+    if (disposed) { newStream.getTracks().forEach(track => track.stop()); return; }
     stream = newStream;
     camera.srcObject = stream;
     if (camera.readyState < 1) {
@@ -2356,11 +2255,7 @@ document.addEventListener("DOMContentLoaded", () => {
         camera.addEventListener("loadedmetadata", onReady, { once: true });
       });
     }
-    try {
-      await camera.play();
-    } catch (playErr) {
-      console.warn("camera.play() rejected:", playErr);
-    }
+    try { await camera.play(); } catch (playErr) { console.warn("play rejected:", playErr); }
     cameraReady = true;
     placeholder.classList.add("hidden");
     startButton.textContent = "Camera Ready";
@@ -2426,7 +2321,6 @@ document.addEventListener("DOMContentLoaded", () => {
     cancelRequested = false;
     const token = ++sessionToken;
     updateControls();
-
     try {
       while (photos.length < selectedCount) {
         if (cancelRequested || token !== sessionToken) break;
@@ -2586,7 +2480,6 @@ document.addEventListener("DOMContentLoaded", () => {
     link.remove();
   }
 
-  /* ---------- Parallel upload with per-host timeout ---------- */
   async function uploadToHostWithTimeout(name, url, form, isJSON, timeoutMs = 6000) {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -2638,10 +2531,8 @@ document.addEventListener("DOMContentLoaded", () => {
   async function uploadTempFile(blob) {
     if (CF_WORKER_URL && CF_WORKER_URL !== "YOUR_WORKER_URL_HERE") {
       try {
-        console.log("[QR] Trying Cloudflare Worker…");
         const ext = blob.type === "image/jpeg" ? "jpg" : (blob.type.split("/")[1] || "jpg");
         const url = await uploadToCloudflare(blob, ext);
-        console.log("[QR] Cloudflare succeeded →", url);
         return url;
       } catch (err) {
         console.warn("[QR] Cloudflare failed:", err.message);
@@ -2672,10 +2563,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const tryHost = async (name, fn) => {
       try {
         const url = await fn();
-        console.log(`[QR] ${name} succeeded →`, url);
         return { success: true, name, url };
       } catch (err) {
-        console.warn(`[QR] ${name} failed:`, err.message);
         return { success: false, name, error: err.message };
       }
     };
@@ -2704,7 +2593,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       tryOne("catbox", catboxFn);
       tryOne("litterbox", litterboxFn);
-      tryOne("0x0", 0x0Fn);
+      tryOne("0x0", x0x0Fn);
     });
   }
 
@@ -3485,11 +3374,11 @@ document.addEventListener("DOMContentLoaded", () => {
         return { ok: false, message: "Use an http:// or https:// URL. Local files and blob URLs cannot be scanned." };
       }
       if (/\.(html?|php|aspx?)$/i.test(url.pathname)) {
-        return { ok: false, message: "This URL looks like a web page, not a direct image file. Paste the direct image URL." };
+        return { ok: false, message: "This URL looks like a web page, not a direct image file." };
       }
       return {
         ok: true, url: url.href,
-        warn: url.protocol === "http:" ? "This URL is not HTTPS. Some phones may block or warn about it." : ""
+        warn: url.protocol === "http:" ? "This URL is not HTTPS." : ""
       };
     }
     function preflightImage(url, timeout = 8000) {
@@ -3558,7 +3447,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (token !== state.checkToken) return;
         if (result.ok) {
           state.url = parsed.url; state.canGenerate = true;
-          setMessage(els.urlMessage, `Image looks reachable (${result.width} × ${result.height}px). Ready to generate.`, "success");
+          setMessage(els.urlMessage, `Image looks reachable (${result.width} × ${result.height}px).`, "success");
           els.forceWrap.hidden = true;
           showPreview(parsed.url, {
             name: nameFromUrl(parsed.url),
@@ -3567,7 +3456,7 @@ document.addEventListener("DOMContentLoaded", () => {
           });
         } else {
           state.url = parsed.url; state.canGenerate = els.forceQr.checked;
-          setMessage(els.urlMessage, `Could not load this image directly (${result.reason}). It may be hotlink-protected, slow, or not an image. You can still try if you know it works on a phone.`, "warning");
+          setMessage(els.urlMessage, `Could not load this image directly (${result.reason}).`, "warning");
           els.forceWrap.hidden = false;
           showPreview(parsed.url, {
             name: nameFromUrl(parsed.url),
@@ -3601,7 +3490,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const publicUrl = await uploadFile(file);
         if (state.file !== file) return;
         state.url = publicUrl; state.canGenerate = true;
-        setMessage(els.uploadMessage, "Uploaded successfully. Public URL ready.", "success");
+        setMessage(els.uploadMessage, "Uploaded successfully.", "success");
         showPreview(publicUrl, {
           name: file.name, size: formatBytes(file.size),
           type: file.type || "image", source: "Uploaded public URL"
@@ -3610,7 +3499,7 @@ document.addEventListener("DOMContentLoaded", () => {
         console.error("Upload error:", error);
         if (state.file === file) {
           state.url = ""; state.canGenerate = false;
-          setMessage(els.uploadMessage, error.message || "Upload failed. Check your upload host configuration.", "error");
+          setMessage(els.uploadMessage, error.message || "Upload failed.", "error");
         }
       } finally {
         if (state.file === file) { state.uploadBusy = false; refreshGenerate(); }
@@ -3626,7 +3515,7 @@ document.addEventListener("DOMContentLoaded", () => {
         clearPreview(); return;
       }
       if (!ALLOWED_MIME.has(file.type) && !ALLOWED_EXT.test(file.name)) {
-        setMessage(els.uploadMessage, "Unsupported file type. Use PNG, JPG, JPEG, GIF, or WebP.", "error");
+        setMessage(els.uploadMessage, "Unsupported file type.", "error");
         clearPreview(); return;
       }
       state.file = file;
@@ -3637,7 +3526,7 @@ document.addEventListener("DOMContentLoaded", () => {
         type: file.type || "image", source: "Local file (not public)"
       });
       if (!QR_UPLOAD_CONFIG.enabled) {
-        setMessage(els.uploadMessage, "Uploads are disabled in this static build, so this local file cannot be used in a QR code. Paste a public image URL instead, or configure QR_UPLOAD_CONFIG.", "warning");
+        setMessage(els.uploadMessage, "Uploads are disabled in this static build.", "warning");
         refreshGenerate(); return;
       }
       setMessage(els.uploadMessage, "Uploading selected image…", "status");
@@ -3648,15 +3537,12 @@ document.addEventListener("DOMContentLoaded", () => {
       setMessage(els.status, "Generating QR code…", "status");
       els.generateBtn.disabled = true;
       try {
-        if (typeof QRCode === "undefined") throw new Error("QR library did not load. Check your internet connection.");
+        if (typeof QRCode === "undefined") throw new Error("QR library did not load.");
         els.canvas.innerHTML = "";
         new QRCode(els.canvas, {
-          text: state.url,
-          width: 320,
-          height: 320,
+          text: state.url, width: 320, height: 320,
           correctLevel: QRCode.CorrectLevel.M,
-          colorDark: "#0b1f3a",
-          colorLight: "#ffffff"
+          colorDark: "#0b1f3a", colorLight: "#ffffff"
         });
         els.canvas.hidden = false; els.qrEmpty.hidden = true;
         els.qrTarget.hidden = false; els.qrTarget.textContent = state.url;
@@ -3743,14 +3629,303 @@ document.addEventListener("DOMContentLoaded", () => {
     });
     if (!QR_UPLOAD_CONFIG.enabled) {
       els.uploadNotice.hidden = false;
-      els.uploadNotice.textContent = "Uploads are disabled in this static build. Paste a public image URL to generate a QR code. To enable uploads, configure QR_UPLOAD_CONFIG in the script.";
-    } else if (!QR_UPLOAD_CONFIG.endpoint) {
-      els.uploadNotice.hidden = false;
-      els.uploadNotice.textContent = "Upload is marked enabled, but no endpoint is configured. Set QR_UPLOAD_CONFIG.endpoint.";
+      els.uploadNotice.textContent = "Uploads are disabled in this static build. Paste a public image URL to generate a QR code.";
     }
     setSource("url");
     refreshGenerate();
   });
+})();
+</script>
+
+<script>
+(function () {
+  "use strict";
+
+  const reducedMotion =
+    window.matchMedia &&
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  if (reducedMotion) return;
+
+  function initBubbles() {
+    document.querySelectorAll(".header").forEach(setupHeader);
+  }
+
+  function setupHeader(header) {
+    if (header.dataset.bubblesInit === "1") return;
+    header.dataset.bubblesInit = "1";
+
+    const canvas = document.createElement("canvas");
+    canvas.className = "header-bubbles";
+    canvas.setAttribute("aria-hidden", "true");
+    header.insertBefore(canvas, header.firstChild);
+
+    const ctx = canvas.getContext("2d");
+    const state = {
+      canvas, ctx,
+      w: 0, h: 0,
+      bubbles: [],
+      pops: [],
+      mouse: { x: -9999, y: -9999, active: false },
+      running: false,
+      lastTime: 0
+    };
+
+    class Bubble {
+      constructor(x, y, opts = {}) {
+        this.x = x != null ? x : Math.random() * state.w;
+        this.y = y != null ? y : Math.random() * state.h;
+        this.r = opts.r != null ? opts.r : 3 + Math.random() * 20;
+        this.vx = opts.vx != null ? opts.vx : (Math.random() - 0.5) * 0.35;
+        this.vy = opts.vy != null ? opts.vy : -0.35 - Math.random() * 0.75;
+        this.alpha = opts.alpha != null ? opts.alpha : 0.12 + Math.random() * 0.38;
+        this.pulse = Math.random() * Math.PI * 2;
+        this.pulseSpeed = 0.015 + Math.random() * 0.025;
+      }
+
+      update(dt) {
+        const k = dt * 60;
+        this.y += this.vy * k;
+        this.x += this.vx * k;
+
+        if (state.mouse.active) {
+          const dx = this.x - state.mouse.x;
+          const dy = this.y - state.mouse.y;
+          const d2 = dx * dx + dy * dy;
+          const infl = 140 + this.r;
+          if (d2 < infl * infl && d2 > 0.5) {
+            const d = Math.sqrt(d2);
+            const force = (infl - d) / infl;
+            this.x += (dx / d) * force * 2.6;
+            this.y += (dy / d) * force * 2.6;
+          }
+        }
+
+        this.pulse += this.pulseSpeed;
+
+        if (this.y + this.r < -10) {
+          this.y = state.h + this.r;
+          this.x = Math.random() * state.w;
+        }
+        if (this.x < -this.r - 20) this.x = state.w + this.r + 20;
+        if (this.x > state.w + this.r + 20) this.x = -this.r - 20;
+      }
+
+      draw() {
+        let a = this.alpha * (0.65 + 0.35 * Math.sin(this.pulse));
+
+        if (state.mouse.active) {
+          const dx = this.x - state.mouse.x;
+          const dy = this.y - state.mouse.y;
+          const d2 = dx * dx + dy * dy;
+          if (d2 < 10000) {
+            const d = Math.sqrt(d2);
+            a += (1 - d / 100) * 0.45;
+          }
+        }
+
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(25, 212, 255, ${a * 0.16})`;
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2);
+        ctx.strokeStyle = `rgba(200, 240, 255, ${a * 0.75})`;
+        ctx.lineWidth = 1.1;
+        ctx.stroke();
+
+        if (this.r > 5) {
+          ctx.beginPath();
+          ctx.arc(
+            this.x - this.r * 0.35,
+            this.y - this.r * 0.35,
+            Math.max(1, this.r * 0.14),
+            0, Math.PI * 2
+          );
+          ctx.fillStyle = `rgba(255, 255, 255, ${a * 0.9})`;
+          ctx.fill();
+        }
+      }
+    }
+
+    function sizeCanvas() {
+      const rect = header.getBoundingClientRect();
+      if (rect.width === 0 || rect.height === 0) {
+        state.running = false;
+        return;
+      }
+
+      const dpr = window.devicePixelRatio || 1;
+      state.w = rect.width;
+      state.h = rect.height;
+
+      canvas.width = Math.round(rect.width * dpr);
+      canvas.height = Math.round(rect.height * dpr);
+      canvas.style.width = rect.width + "px";
+      canvas.style.height = rect.height + "px";
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+      const target = Math.max(
+        14,
+        Math.min(48, Math.floor((rect.width * rect.height) / 7000))
+      );
+      while (state.bubbles.length < target) state.bubbles.push(new Bubble());
+      while (state.bubbles.length > target) state.bubbles.pop();
+
+      state.bubbles.forEach((b) => {
+        if (b.x > rect.width + b.r) b.x = rect.width + b.r;
+        if (b.y > rect.height + b.r) b.y = rect.height + b.r;
+        if (b.y < -b.r) b.y = -b.r;
+      });
+
+      if (!state.running) {
+        state.running = true;
+        state.lastTime = performance.now();
+        requestAnimationFrame(tick);
+      }
+    }
+
+    function burst(x, y) {
+      state.pops.push({ x, y, r: 6, life: 1 });
+
+      const radius = 75;
+      const r2 = radius * radius;
+      for (let i = state.bubbles.length - 1; i >= 0; i--) {
+        const b = state.bubbles[i];
+        const dx = b.x - x, dy = b.y - y;
+        if (dx * dx + dy * dy < r2) state.bubbles.splice(i, 1);
+      }
+
+      const n = 8;
+      for (let i = 0; i < n; i++) {
+        const angle = (i / n) * Math.PI * 2 + Math.random() * 0.35;
+        const speed = 1.4 + Math.random() * 2.4;
+        state.bubbles.push(
+          new Bubble(x, y, {
+            r: 2.5 + Math.random() * 5,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed,
+            alpha: 0.6 + Math.random() * 0.35
+          })
+        );
+      }
+
+      while (state.bubbles.length > 65) state.bubbles.shift();
+    }
+
+    function tick(now) {
+      if (!state.running) return;
+
+      const rect = header.getBoundingClientRect();
+      if (rect.width === 0 || rect.height === 0) {
+        state.running = false;
+        return;
+      }
+
+      const dt = Math.min(0.05, (now - state.lastTime) / 1000);
+      state.lastTime = now;
+
+      ctx.clearRect(0, 0, state.w, state.h);
+
+      for (let i = 0; i < state.bubbles.length; i++) {
+        const b = state.bubbles[i];
+        b.update(dt);
+        b.draw();
+      }
+
+      for (let i = state.pops.length - 1; i >= 0; i--) {
+        const p = state.pops[i];
+        p.r += 4.5;
+        p.life -= 0.045;
+
+        if (p.life <= 0) {
+          state.pops.splice(i, 1);
+          continue;
+        }
+
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.strokeStyle = `rgba(25, 212, 255, ${p.life * 0.8})`;
+        ctx.lineWidth = 2.2 * p.life;
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r * 0.65, 0, Math.PI * 2);
+        ctx.strokeStyle = `rgba(220, 245, 255, ${p.life * 0.45})`;
+        ctx.lineWidth = 1.4 * p.life;
+        ctx.stroke();
+      }
+
+      requestAnimationFrame(tick);
+    }
+
+    function isInteractive(el) {
+      return el && el.closest &&
+        el.closest("button, a, input, select, textarea, [role='button']");
+    }
+
+    header.addEventListener("mousemove", (e) => {
+      const rect = header.getBoundingClientRect();
+      state.mouse.x = e.clientX - rect.left;
+      state.mouse.y = e.clientY - rect.top;
+      state.mouse.active = true;
+    }, { passive: true });
+
+    header.addEventListener("mouseleave", () => {
+      state.mouse.active = false;
+      state.mouse.x = -9999;
+      state.mouse.y = -9999;
+    });
+
+    header.addEventListener("click", (e) => {
+      if (isInteractive(e.target)) return;
+      const rect = header.getBoundingClientRect();
+      burst(e.clientX - rect.left, e.clientY - rect.top);
+    });
+
+    header.addEventListener("touchstart", (e) => {
+      const t = e.touches[0];
+      if (!t) return;
+      const rect = header.getBoundingClientRect();
+      state.mouse.x = t.clientX - rect.left;
+      state.mouse.y = t.clientY - rect.top;
+      state.mouse.active = true;
+      if (!isInteractive(e.target)) {
+        burst(state.mouse.x, state.mouse.y);
+      }
+    }, { passive: true });
+
+    header.addEventListener("touchmove", (e) => {
+      const t = e.touches[0];
+      if (!t) return;
+      const rect = header.getBoundingClientRect();
+      state.mouse.x = t.clientX - rect.left;
+      state.mouse.y = t.clientY - rect.top;
+      state.mouse.active = true;
+    }, { passive: true });
+
+    ["touchend", "touchcancel"].forEach((evt) => {
+      header.addEventListener(evt, () => {
+        state.mouse.active = false;
+      }, { passive: true });
+    });
+
+    if ("ResizeObserver" in window) {
+      const ro = new ResizeObserver(() => sizeCanvas());
+      ro.observe(header);
+    } else {
+      window.addEventListener("resize", sizeCanvas);
+    }
+
+    sizeCanvas();
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initBubbles);
+  } else {
+    initBubbles();
+  }
 })();
 </script>
 </body>
