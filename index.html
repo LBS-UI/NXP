@@ -758,11 +758,18 @@ input[type="range"] { width: 100%; height: 6px; accent-color: var(--blue); curso
     font-family: 'Inter', sans-serif;
     font-size: 5pt; font-weight: 700;
   }
+
+  /* FIX: keep the entire downloaded image inside the print frame.
+     Previously object-fit: cover cropped the left/right sides of
+     landscape collages. contain shows the whole image centred. */
   .print-film > img {
     display: block; width: 100%;
     min-height: 0; flex: 1 1 0;
-    object-fit: cover; object-position: center;
+    object-fit: contain;
+    object-position: center;
+    background: #ffffff;
   }
+
   .print-caption {
     height: .83in; flex: 0 0 .83in;
     padding: .07in .05in;
@@ -2529,12 +2536,18 @@ document.addEventListener("DOMContentLoaded", () => {
   function updateStatus(message) { status.textContent = message; }
   function updateEditorStatus(message) { editorStatus.textContent = message; }
 
+  /* ============================================================
+     FIX: Lock aspect ratio buttons once a collage exists.
+     This prevents the film preview, downloaded image, and print
+     template from ever showing different ratios.
+     ============================================================ */
   function updateControls() {
     captureButton.disabled = !cameraReady || busy;
     retakeButton.disabled = busy || photos.length === 0;
     gridOptions.forEach(button => { button.disabled = busy; });
     timerOptions.forEach(button => { button.disabled = busy; });
-    ratioOptions.forEach(button => { button.disabled = busy; });
+    const collageExists = photos.length > 0 && photos.length === selectedCount;
+    ratioOptions.forEach(button => { button.disabled = busy || collageExists; });
     cancelButton.classList.toggle("hidden", !sessionActive);
     captureButton.classList.toggle("hidden", sessionActive);
     cancelButton.disabled = !sessionActive;
@@ -2846,6 +2859,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const uploadBlob = await createUploadBlob(blob);
     lastShareBlob = uploadBlob || blob;
     showQrButton.disabled = false;
+    updateControls();
     showQrModal(lastShareBlob);
   }
 
