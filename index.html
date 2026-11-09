@@ -2284,13 +2284,26 @@ document.addEventListener("DOMContentLoaded", () => {
     link.remove();
   }
 
-  async function uploadWithTimeout(name, uploadFn, blob, timeoutMs = 15000) {
-    return Promise.race([
-      uploadFn(blob),
-      new Promise((_, reject) =>
-        setTimeout(() => reject(new Error(`${name} timed out after ${timeoutMs / 1000}s`)), timeoutMs)
-      )
-    ]);
+  /* ---------- Parallel upload with per-host timeout ---------- */
+  async function uploadToHostWithTimeout(name, url, form, isJSON, timeoutMs = 6000) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const res = await fetch(url, { method: "POST", body: form, signal: controller.signal });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      if (isJSON) {
+        const data = await res.json();
+        if (data && data.data && data.data.url) {
+          return data.data.url.replace("tmpfiles.org/", "tmpfiles.org/dl/");
+        }
+        throw new Error("Invalid JSON response");
+      }
+      const text = (await res.text()).trim();
+      if (!/^https?:\/\//i.test(text)) throw new Error(`Invalid response: ${text.slice(0, 80)}`);
+      return text;
+    } finally {
+      clearTimeout(timer);
+    }
   }
 
   async function uploadToCloudflare(blob, ext) {
@@ -2323,8 +2336,8 @@ document.addEventListener("DOMContentLoaded", () => {
   async function uploadTempFile(blob) {
     if (CF_WORKER_URL && CF_WORKER_URL !== "YOUR_WORKER_URL_HERE") {
       try {
-        const ext = blob.type === "image/jpeg" ? "jpg" : (blob.type.split("/")[1] || "jpg");
         console.log("[QR] Trying Cloudflare Worker…");
+        const ext = blob.type === "image/jpeg" ? "jpg" : (blob.type.split("/")[1] || "jpg");
         const url = await uploadToCloudflare(blob, ext);
         console.log("[QR] Cloudflare succeeded →", url);
         return url;
@@ -2333,64 +2346,64 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     }
 
-    const hosts = [
-      { name: "0x0.st", fn: async (blob) => {
-        const form = new FormData();
-        form.append("file", blob, `nextgen-${Date.now()}.jpg`);
-        const res = await fetch("https://0x0.st", { method: "POST", body: form });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const text = (await res.text()).trim();
-        if (!/^https?:\/\//i.test(text)) throw new Error(`Invalid response: ${text.slice(0, 100)}`);
-        return text;
-      }},
-      { name: "tmpfiles.org", fn: async (blob) => {
-        const form = new FormData();
-        form.append("file", blob, `nextgen-${Date.now()}.jpg`);
-        const res = await fetch("https://tmpfiles.org/api/v1/upload", { method: "POST", body: form });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = await res.json();
-        if (data && data.data && data.data.url) {
-          return data.data.url.replace("tmpfiles.org/", "tmpfiles.org/dl/");
-        }
-        throw new Error("Invalid JSON response");
-      }},
-      { name: "catbox.moe", fn: async (blob) => {
-        const form = new FormData();
-        form.append("reqtype", "fileupload");
-        form.append("fileToUpload", blob, `nextgen-${Date.now()}.jpg`);
-        const res = await fetch("https://catbox.moe/user/api.php", { method: "POST", body: form });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const text = (await res.text()).trim();
-        if (!/^https?:\/\//i.test(text)) throw new Error(`Invalid response: ${text.slice(0, 100)}`);
-        return text;
-      }},
-      { name: "litterbox", fn: async (blob) => {
-        const form = new FormData();
-        form.append("reqtype", "fileupload");
-        form.append("time", "72h");
-        form.append("fileToUpload", blob, `nextgen-${Date.now()}.jpg`);
-        const res = await fetch("https://litterbox.catbox.moe/resources/internals/api.php", { method: "POST", body: form });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const text = (await res.text()).trim();
-        if (!/^https?:\/\//i.test(text)) throw new Error(`Invalid response: ${text.slice(0, 100)}`);
-        return text;
-      }}
-    ];
+    const catboxFn = async () => {
+      const form = new FormData();
+      form.append("reqtype", "fileupload");
+      form.append("fileToUpload", blob, `nextgen-${Date.now()}.jpg`);
+      return uploadToHostWithTimeout("catbox", "https://catbox.moe/user/api.php", form, false);
+    };
 
-    const errors = [];
-    for (const host of hosts) {
+    const litterboxFn = async () => {
+      const form = new FormData();
+      form.append("reqtype", "fileupload");
+      form.append("time", "72h");
+      form.append("fileToUpload", blob, `nextgen-${Date.now()}.jpg`);
+      return uploadToHostWithTimeout("litterbox", "https://litterbox.catbox.moe/resources/internals/api.php", form, false);
+    };
+
+    const x0x0Fn = async () => {
+      const form = new FormData();
+      form.append("file", blob, `nextgen-${Date.now()}.jpg`);
+      return uploadToHostWithTimeout("0x0", "https://0x0.st", form, false);
+    };
+
+    const tryHost = async (name, fn) => {
       try {
-        console.log(`[QR] Trying ${host.name}…`);
-        const url = await uploadWithTimeout(host.name, host.fn, blob);
-        console.log(`[QR] ${host.name} succeeded →`, url);
-        return url;
+        const url = await fn();
+        console.log(`[QR] ${name} succeeded →`, url);
+        return { success: true, name, url };
       } catch (err) {
-        const msg = err && err.message ? err.message : String(err);
-        console.warn(`[QR] ${host.name} failed:`, msg);
-        errors.push(`${host.name}: ${msg}`);
+        console.warn(`[QR] ${name} failed:`, err.message);
+        return { success: false, name, error: err.message };
       }
-    }
-    throw new Error("All upload hosts failed. This usually means CORS is blocked or the network is restricted.\n" + errors.join("\n"));
+    };
+
+    return new Promise((resolve, reject) => {
+      let settled = false;
+      const results = [];
+      let remaining = 3;
+
+      const tryOne = (name, fn) => {
+        tryHost(name, fn).then(result => {
+          results.push(result);
+          if (result.success && !settled) {
+            settled = true;
+            resolve(result.url);
+          } else {
+            remaining--;
+            if (remaining === 0 && !settled) {
+              settled = true;
+              const errors = results.map(r => `${r.name}: ${r.error || "?"}`).join(" | ");
+              reject(new Error("All upload hosts failed. " + errors));
+            }
+          }
+        });
+      };
+
+      tryOne("catbox", catboxFn);
+      tryOne("litterbox", litterboxFn);
+      tryOne("0x0", 0x0Fn);
+    });
   }
 
   function hideQrModal() {
@@ -2409,70 +2422,83 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   async function renderQrImage(url) {
-    if (typeof QRCode !== "undefined") {
-      try {
-        const temp = document.createElement("div");
-        new QRCode(temp, {
-          text: url,
-          width: 280,
-          height: 280,
-          correctLevel: QRCode.CorrectLevel.M,
-          colorDark: "#061640",
-          colorLight: "#ffffff"
-        });
-        const canvas = temp.querySelector("canvas");
-        const img = temp.querySelector("img");
-        if (canvas) {
-          return { dataUrl: canvas.toDataURL("image/png"), canvas };
-        }
-        if (img && img.src) {
-          const outCanvas = await new Promise(resolve => {
-            const c = document.createElement("canvas");
-            const image = new Image();
-            image.onload = () => {
-              c.width = image.width;
-              c.height = image.height;
-              c.getContext("2d").drawImage(image, 0, 0);
-              resolve(c);
-            };
-            image.src = img.src;
-          });
-          return { dataUrl: outCanvas.toDataURL("image/png"), canvas: outCanvas };
-        }
-      } catch (err) {
-        console.warn("QRCode generation failed, falling back to api.qrserver.com:", err);
-      }
+    if (typeof QRCode === "undefined") {
+      throw new Error("QR library not loaded. Check your internet connection and reload.");
     }
-    const apiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=280x280&margin=8&data=${encodeURIComponent(url)}`;
-    const res = await fetch(apiUrl);
-    if (!res.ok) throw new Error("QR service unavailable");
-    const blob = await res.blob();
-    return await new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const img = new Image();
-        img.onload = () => {
+
+    const temp = document.createElement("div");
+    temp.style.cssText = "position:absolute;left:-9999px;top:0;";
+    document.body.appendChild(temp);
+
+    try {
+      new QRCode(temp, {
+        text: url,
+        width: 280,
+        height: 280,
+        correctLevel: QRCode.CorrectLevel.M,
+        colorDark: "#061640",
+        colorLight: "#ffffff"
+      });
+
+      const canvas = temp.querySelector("canvas");
+      if (canvas) {
+        return { dataUrl: canvas.toDataURL("image/png"), canvas };
+      }
+
+      const img = temp.querySelector("img");
+      if (img && img.src) {
+        const outCanvas = await new Promise((resolve, reject) => {
           const c = document.createElement("canvas");
-          c.width = img.width; c.height = img.height;
-          c.getContext("2d").drawImage(img, 0, 0);
-          resolve({ dataUrl: c.toDataURL("image/png"), canvas: c });
+          c.width = 280;
+          c.height = 280;
+          const image = new Image();
+          image.onload = () => {
+            c.getContext("2d").drawImage(image, 0, 0, 280, 280);
+            resolve(c);
+          };
+          image.onerror = () => reject(new Error("Failed to load QR image"));
+          image.src = img.src;
+        });
+        return { dataUrl: outCanvas.toDataURL("image/png"), canvas: outCanvas };
+      }
+
+      throw new Error("QR library produced no output");
+    } catch (err) {
+      console.error("[QR] renderQrImage failed:", err);
+      const apiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=280x280&margin=8&data=${encodeURIComponent(url)}`;
+      const res = await fetch(apiUrl);
+      if (!res.ok) throw new Error("QR service unavailable");
+      const blob = await res.blob();
+      return await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const image = new Image();
+          image.onload = () => {
+            const c = document.createElement("canvas");
+            c.width = 280; c.height = 280;
+            c.getContext("2d").drawImage(image, 0, 0, 280, 280);
+            resolve({ dataUrl: c.toDataURL("image/png"), canvas: c });
+          };
+          image.onerror = () => reject(new Error("Failed to load fallback QR"));
+          image.src = reader.result;
         };
-        img.onerror = () => reject(new Error("Failed to load QR image"));
-        img.src = reader.result;
-      };
-      reader.onerror = () => reject(new Error("Failed to read QR image"));
-      reader.readAsDataURL(blob);
-    });
+        reader.onerror = () => reject(new Error("Failed to read QR image"));
+        reader.readAsDataURL(blob);
+      });
+    } finally {
+      if (temp.parentNode) temp.parentNode.removeChild(temp);
+    }
   }
 
   async function showQrModal(blob) {
     if (!blob) return;
     if (qrUploadInProgress) return;
     qrUploadInProgress = true;
+
     qrModal.classList.remove("hidden");
     qrImage.removeAttribute("src");
     qrImage.alt = "Preparing QR code…";
-    qrStatus.textContent = "Uploading photo so phones can save it…";
+    qrStatus.textContent = "Uploading photo… 0s";
     qrDownloadBtn.disabled = true;
     qrCopyBtn.disabled = true;
     qrRetryBtn.disabled = true;
@@ -2481,17 +2507,27 @@ document.addEventListener("DOMContentLoaded", () => {
     qrDownloadLink.hidden = true;
     if (qrUrlWrap) qrUrlWrap.hidden = true;
 
+    const startTime = Date.now();
+    const progressTimer = setInterval(() => {
+      const elapsed = Math.round((Date.now() - startTime) / 1000);
+      if (qrUploadInProgress) {
+        qrStatus.textContent = `Uploading photo… ${elapsed}s`;
+      }
+    }, 1000);
+
     try {
       let imageUrl = lastSharedImageUrl;
       if (!imageUrl) {
         imageUrl = await uploadTempFile(blob);
         lastSharedImageUrl = imageUrl;
       }
+
+      qrStatus.textContent = "Creating QR code…";
       const { dataUrl, canvas } = await renderQrImage(imageUrl);
       qrCanvas = canvas;
       qrImage.src = dataUrl;
       qrImage.alt = "QR code linking to your photo";
-      qrStatus.textContent = "Ready. Scan with any phone camera, then long-press the image to save.";
+      qrStatus.textContent = "Ready! Scan with any phone camera.";
       qrDownloadLink.href = imageUrl;
       qrDownloadLink.hidden = false;
       qrDownloadBtn.disabled = false;
@@ -2503,11 +2539,12 @@ document.addEventListener("DOMContentLoaded", () => {
     } catch (error) {
       console.error("QR upload error:", error);
       lastSharedImageUrl = "";
-      qrStatus.textContent = "Upload failed. Click Retry, or try a different network.";
+      qrStatus.textContent = "Upload failed. " + (error.message || "").slice(0, 100);
       qrImage.alt = "QR unavailable — upload failed";
       qrRetryBtn.disabled = false;
       qrRetryBtn.hidden = false;
     } finally {
+      clearInterval(progressTimer);
       qrUploadInProgress = false;
     }
   }
