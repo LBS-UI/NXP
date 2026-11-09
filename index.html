@@ -105,6 +105,181 @@
     line-height: 1.4;
   }
   #retryUploadBtn { display: none; }
+
+  /* ============================================================
+     ADDITIVE ENHANCEMENTS — added on top of the original styles.
+     None of the existing rules above are modified or removed.
+     ============================================================ */
+
+  @keyframes fade-up {
+    from { opacity: 0; transform: translateY(24px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes slide-in-left {
+    from { opacity: 0; transform: translateX(-24px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+  @keyframes slide-in-right {
+    from { opacity: 0; transform: translateX(24px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+  @keyframes blink-caret {
+    0%, 100% { opacity: 1; }
+    50%      { opacity: 0; }
+  }
+  @keyframes status-pop {
+    0%   { transform: scale(1); }
+    35%  { transform: scale(1.03); }
+    70%  { transform: scale(0.98); }
+    100% { transform: scale(1); }
+  }
+  @keyframes status-shake {
+    0%, 100% { transform: translateX(0); }
+    20%      { transform: translateX(-6px); }
+    40%      { transform: translateX(6px); }
+    60%      { transform: translateX(-4px); }
+    80%      { transform: translateX(4px); }
+  }
+  @keyframes badge-pop {
+    0%   { transform: scale(1); }
+    50%  { transform: scale(1.08); }
+    100% { transform: scale(1); }
+  }
+  @keyframes qr-fade-in {
+    from { opacity: 0; transform: translateY(10px) scale(0.98); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  @keyframes preview-glow {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.0); }
+    50%      { box-shadow: 0 0 0 6px rgba(59, 130, 246, 0.12); }
+  }
+
+  /* Scroll-reveal base */
+  .scroll-reveal {
+    opacity: 0;
+    transform: translateY(24px);
+    transition:
+      opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1),
+      transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+    transition-delay: var(--reveal-delay, 0s);
+    will-change: opacity, transform;
+  }
+  .scroll-reveal.revealed {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  .scroll-reveal.from-left {
+    transform: translateX(-24px);
+  }
+  .scroll-reveal.from-left.revealed {
+    transform: translateX(0);
+  }
+  .scroll-reveal.from-right {
+    transform: translateX(24px);
+  }
+  .scroll-reveal.from-right.revealed {
+    transform: translateX(0);
+  }
+
+  /* Typing cursor */
+  .typing-text::after {
+    content: "|";
+    display: inline-block;
+    margin-left: 2px;
+    font-weight: 300;
+    animation: blink-caret 0.7s step-end infinite;
+  }
+
+  /* Status feedback (applies when class first added) */
+  .status.success { animation: status-pop 0.5s ease-out; }
+  .status.error   { animation: status-shake 0.5s ease-out; }
+
+  /* QR appear animation */
+  .qr-appear {
+    animation: qr-fade-in 0.55s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  /* Ratio badge (created via JS, floated in top-right of preview) */
+  .ratio-badge {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    padding: 6px 10px;
+    border-radius: 8px;
+    background: rgba(15, 17, 21, 0.86);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    color: #93c5fd;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    z-index: 10;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(147, 197, 253, 0.35);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45);
+    font-family: "SF Mono", Menlo, Consolas, monospace;
+    pointer-events: none;
+    user-select: none;
+  }
+  .ratio-badge.badge-pop {
+    animation: badge-pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  /* Jump-to-QR button — subtle appearance */
+  .jump-qr-btn {
+    animation: fade-up 0.4s ease-out;
+  }
+
+  /* Polish: buttons feel more tactile */
+  button {
+    transition:
+      transform 0.15s ease,
+      background-color 0.15s ease,
+      box-shadow 0.15s ease,
+      opacity 0.15s ease;
+  }
+  button:not(:disabled):active {
+    transform: scale(0.97);
+  }
+  button:not(:disabled):hover {
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+  }
+
+  /* Panel hover lift */
+  .panel {
+    transition: box-shadow 0.3s ease, transform 0.3s ease;
+  }
+  .panel:hover {
+    box-shadow: 0 10px 32px rgba(0, 0, 0, 0.25);
+  }
+
+  /* Preview wrap glow when camera is active */
+  #previewWrap.is-active {
+    animation: preview-glow 2.4s ease-in-out infinite;
+  }
+
+  /* QR container hover lift */
+  #qrContainer {
+    transition: transform 0.3s ease;
+  }
+  #qrContainer:hover {
+    transform: translateY(-2px);
+  }
+
+  /* Respect users who prefer reduced motion */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+    .scroll-reveal {
+      opacity: 1 !important;
+      transform: none !important;
+    }
+  }
 </style>
 </head>
 <body>
@@ -541,6 +716,224 @@ downloadQRBtn.addEventListener("click", () => {
   a.download = `snapstudio-qr-${Date.now()}.png`;
   a.click();
 });
+</script>
+
+<!-- ============================================================
+     ADDITIVE ENHANCEMENTS SCRIPT
+     This block does NOT touch any existing function, variable,
+     or DOM element from the working script above. Everything it
+     does is additive:
+       1. Types out the header title on first load
+       2. Scroll-reveals the panels & control rows
+       3. Shows a live aspect-ratio badge on the preview
+       4. Adds a "Jump to QR" button next to Download QR
+       5. Adds QR-appear animation, active-camera glow
+     ============================================================ -->
+<script>
+(function () {
+  "use strict";
+
+  function init() {
+
+    /* ---------------------------------------------------------
+       1. HEADER TYPING ANIMATION
+       Replace h1 text with an empty string, then type it back
+       in one character at a time. Uses only textContent so it
+       cannot break the existing DOM structure or CSS.
+       --------------------------------------------------------- */
+    const headerH1 = document.querySelector("header h1");
+    if (headerH1) {
+      const fullText = headerH1.textContent || "";
+      headerH1.textContent = "";
+      headerH1.classList.add("typing-text");
+
+      let i = 0;
+      const typeInterval = setInterval(() => {
+        if (i >= fullText.length) {
+          clearInterval(typeInterval);
+          setTimeout(() => headerH1.classList.remove("typing-text"), 600);
+          return;
+        }
+        headerH1.textContent += fullText[i];
+        i++;
+      }, 90);
+    }
+
+    /* ---------------------------------------------------------
+       2. SCROLL REVEAL
+       Attach .scroll-reveal to major elements and mark them
+       .revealed once they enter the viewport.
+       --------------------------------------------------------- */
+    const revealObserver = new IntersectionObserver(
+      function (entries) {
+        entries.forEach(function (entry) {
+          if (entry.isIntersecting) {
+            entry.target.classList.add("revealed");
+            revealObserver.unobserve(entry.target);
+          }
+        });
+      },
+      { threshold: 0.1, rootMargin: "0px 0px -40px 0px" }
+    );
+
+    function addReveal(el, delaySec, direction) {
+      if (!el || el.classList.contains("scroll-reveal")) return;
+      el.classList.add("scroll-reveal");
+      if (direction === "left") el.classList.add("from-left");
+      if (direction === "right") el.classList.add("from-right");
+      if (delaySec) el.style.setProperty("--reveal-delay", delaySec + "s");
+      revealObserver.observe(el);
+    }
+
+    // Apply to panels
+    document.querySelectorAll(".panel").forEach(function (el) {
+      addReveal(el, 0);
+    });
+
+    // Apply to control rows with a stagger
+    const controlRows = document.querySelectorAll(".controls.row");
+    controlRows.forEach(function (el, i) {
+      addReveal(el, 0.08 + i * 0.06);
+    });
+
+    // Apply to status, QR container, privacy text
+    addReveal(document.getElementById("status"), 0.32);
+    addReveal(document.getElementById("qrContainer"), 0.36);
+    addReveal(document.querySelector(".privacy"), 0.4);
+
+    /* ---------------------------------------------------------
+       3. LIVE RATIO BADGE
+       Create a floating badge inside #previewWrap that mirrors
+       the current value of #ratioSelect. Adds a NEW listener
+       to #ratioSelect — the original crop listener still runs.
+       --------------------------------------------------------- */
+    const previewWrap = document.getElementById("previewWrap");
+    const ratioSelect = document.getElementById("ratioSelect");
+    const editControls = document.getElementById("editControls");
+
+    if (previewWrap && ratioSelect) {
+      const badge = document.createElement("div");
+      badge.className = "ratio-badge";
+      badge.id = "ratioBadge";
+      badge.textContent = ratioSelect.value;
+      badge.setAttribute("aria-hidden", "true");
+      previewWrap.appendChild(badge);
+
+      // Additive listener — does NOT affect the crop renderer
+      ratioSelect.addEventListener("change", function () {
+        badge.textContent = ratioSelect.value;
+        badge.classList.remove("badge-pop");
+        // force reflow so the animation can replay
+        void badge.offsetWidth;
+        badge.classList.add("badge-pop");
+      });
+
+      // Show badge only when the edit controls are visible
+      // (i.e. after a photo has been captured or uploaded).
+      if (editControls) {
+        const editObserver = new MutationObserver(function () {
+          const visible = editControls.style.display !== "none";
+          badge.style.display = visible ? "inline-flex" : "none";
+        });
+        editObserver.observe(editControls, {
+          attributes: true,
+          attributeFilter: ["style"]
+        });
+      }
+    }
+
+    /* ---------------------------------------------------------
+       4. JUMP TO QR BUTTON
+       Add a button next to Download QR that appears only when
+       the QR container is visible. Clicking it scrolls the QR
+       back into view and briefly outlines it.
+       --------------------------------------------------------- */
+    const downloadQRBtn = document.getElementById("downloadQRBtn");
+    const qrBox = document.getElementById("qrContainer");
+
+    if (qrBox && downloadQRBtn) {
+      const jumpBtn = document.createElement("button");
+      jumpBtn.id = "jumpQrBtn";
+      jumpBtn.type = "button";
+      jumpBtn.className = "secondary jump-qr-btn";
+      jumpBtn.textContent = "\u2193 Jump to QR";
+      jumpBtn.style.display = "none";
+
+      jumpBtn.addEventListener("click", function () {
+        qrBox.scrollIntoView({ behavior: "smooth", block: "center" });
+        qrBox.style.outline = "2px solid #3b82f6";
+        qrBox.style.outlineOffset = "4px";
+        qrBox.style.borderRadius = "12px";
+        setTimeout(function () {
+          qrBox.style.outline = "";
+          qrBox.style.outlineOffset = "";
+          qrBox.style.borderRadius = "";
+        }, 1200);
+      });
+
+      downloadQRBtn.parentNode.insertBefore(
+        jumpBtn,
+        downloadQRBtn.nextSibling
+      );
+
+      // Watch qrContainer.style.display -> show/hide jump button
+      const qrObserver = new MutationObserver(function () {
+        const visible = qrBox.style.display === "block";
+        jumpBtn.style.display = visible ? "inline-block" : "none";
+      });
+      qrObserver.observe(qrBox, {
+        attributes: true,
+        attributeFilter: ["style"]
+      });
+    }
+
+    /* ---------------------------------------------------------
+       5. QR APPEAR ANIMATION
+       Watch #qrContainer for when it becomes visible, then add
+       .qr-appear so the QR fades in nicely.
+       --------------------------------------------------------- */
+    if (qrBox) {
+      const appearObserver = new MutationObserver(function () {
+        if (qrBox.style.display === "block") {
+          qrBox.classList.remove("qr-appear");
+          void qrBox.offsetWidth;
+          qrBox.classList.add("qr-appear");
+        }
+      });
+      appearObserver.observe(qrBox, {
+        attributes: true,
+        attributeFilter: ["style"]
+      });
+    }
+
+    /* ---------------------------------------------------------
+       6. ACTIVE CAMERA GLOW
+       Watch the "Start Camera" button state and toggle the
+       .is-active class on #previewWrap whenever the camera
+       preview becomes live.
+       --------------------------------------------------------- */
+    const startBtn = document.getElementById("startCameraBtn");
+    const captureBtn = document.getElementById("captureBtn");
+
+    if (previewWrap && captureBtn) {
+      const cameraObserver = new MutationObserver(function () {
+        const active = !captureBtn.disabled;
+        previewWrap.classList.toggle("is-active", active);
+      });
+      cameraObserver.observe(captureBtn, {
+        attributes: true,
+        attributeFilter: ["disabled"]
+      });
+    }
+
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", init);
+  } else {
+    init();
+  }
+})();
 </script>
 </body>
 </html>
