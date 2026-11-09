@@ -6,6 +6,10 @@
   <meta name="theme-color" content="#061640">
   <title>NEXTGEN Smart Classroom Photobooth</title>
 
+  <link rel="icon" type="image/jpeg" href="./NEXTGEN%20LOGO.jpg">
+  <link rel="shortcut icon" type="image/jpeg" href="./NEXTGEN%20LOGO.jpg">
+  <link rel="apple-touch-icon" href="./NEXTGEN%20LOGO.jpg">
+
   <script>
     (function () {
       try {
@@ -758,10 +762,6 @@ input[type="range"] { width: 100%; height: 6px; accent-color: var(--blue); curso
     font-family: 'Inter', sans-serif;
     font-size: 5pt; font-weight: 700;
   }
-
-  /* FIX: keep the entire downloaded image inside the print frame.
-     Previously object-fit: cover cropped the left/right sides of
-     landscape collages. contain shows the whole image centred. */
   .print-film > img {
     display: block; width: 100%;
     min-height: 0; flex: 1 1 0;
@@ -769,7 +769,6 @@ input[type="range"] { width: 100%; height: 6px; accent-color: var(--blue); curso
     object-position: center;
     background: #ffffff;
   }
-
   .print-caption {
     height: .83in; flex: 0 0 .83in;
     padding: .07in .05in;
@@ -1235,7 +1234,7 @@ input[type="range"] { width: 100%; height: 6px; accent-color: var(--blue); curso
 }
 
 /* ============================================================
-   THEME TOGGLE BUTTON
+   THEME TOGGLE — PREMIUM GLASS BUTTON
    ============================================================ */
 
 .theme-toggle {
@@ -1243,46 +1242,145 @@ input[type="range"] { width: 100%; height: 6px; accent-color: var(--blue); curso
   top: 20px;
   right: 20px;
   z-index: 9999;
-  width: 48px;
-  height: 48px;
+  width: 52px;
+  height: 52px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.96);
-  border: 1px solid var(--border);
+  background: radial-gradient(
+    circle at 30% 30%,
+    rgba(255, 255, 255, 0.99) 0%,
+    rgba(240, 246, 255, 0.94) 55%,
+    rgba(220, 233, 251, 0.98) 100%
+  );
+  border: 2px solid var(--border);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 22px;
   line-height: 1;
-  box-shadow: 0 4px 16px rgba(6, 22, 64, 0.18);
-  transition: transform 0.25s ease, box-shadow 0.25s ease,
-    background-color 0.4s ease, border-color 0.4s ease;
+  box-shadow:
+    0 4px 20px rgba(6, 22, 64, 0.20),
+    0 1px 3px rgba(6, 22, 64, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    inset 0 -2px 4px rgba(6, 22, 64, 0.04);
+  transition:
+    transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 0.35s ease,
+    background 0.4s ease,
+    border-color 0.4s ease;
   -webkit-tap-highlight-color: transparent;
 }
+.theme-toggle::after {
+  content: '';
+  position: absolute;
+  inset: -5px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  border-top-color: var(--cyan);
+  border-right-color: var(--blue);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.35s ease;
+  animation: themeGlowRotate 2.5s linear infinite;
+}
+.theme-toggle:hover::after { opacity: 0.85; }
+@keyframes themeGlowRotate { to { transform: rotate(360deg); } }
 .theme-toggle:hover {
-  transform: scale(1.1) rotate(15deg);
-  box-shadow: 0 6px 24px rgba(6, 22, 64, 0.28);
+  transform: scale(1.08) translateY(-1px);
+  box-shadow:
+    0 10px 32px rgba(6, 22, 64, 0.28),
+    0 2px 6px rgba(6, 22, 64, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.95),
+    inset 0 -2px 4px rgba(6, 22, 64, 0.04);
 }
 .theme-toggle:active {
-  transform: scale(0.94);
+  transform: scale(0.92);
+  transition-duration: 0.1s;
 }
 .theme-toggle:focus-visible {
   outline: 3px solid var(--cyan);
-  outline-offset: 3px;
+  outline-offset: 4px;
 }
 .theme-icon {
-  display: block;
-  transition: transform 0.4s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  font-size: 22px;
+  transition: transform 0.55s cubic-bezier(0.34, 1.56, 0.64, 1);
+  filter: drop-shadow(0 1px 1px rgba(6, 22, 64, 0.12));
+  will-change: transform;
+  position: relative;
+  z-index: 1;
+}
+.theme-toggle:hover .theme-icon { transform: rotate(18deg) scale(1.05); }
+.theme-toggle:active .theme-icon { transform: scale(0.9) rotate(-10deg); }
+.theme-toggle.is-switching .theme-icon {
+  animation: iconSwap 0.55s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes iconSwap {
+  0%   { transform: scale(1) rotate(0deg); opacity: 1; }
+  45%  { transform: scale(0.5) rotate(-180deg); opacity: 0; }
+  55%  { transform: scale(0.5) rotate(180deg); opacity: 0; }
+  100% { transform: scale(1) rotate(0deg); opacity: 1; }
+}
+.theme-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2px solid var(--cyan);
+  opacity: 0;
+  pointer-events: none;
+}
+.theme-toggle.is-pulsing .theme-ring {
+  animation: themePulse 0.7s ease-out;
+}
+@keyframes themePulse {
+  0%   { opacity: 0.95; transform: scale(1); }
+  100% { opacity: 0; transform: scale(2.2); }
+}
+
+html[data-theme="dark"] .theme-toggle {
+  background: radial-gradient(
+    circle at 30% 30%,
+    rgba(34, 45, 74, 0.99) 0%,
+    rgba(20, 30, 55, 0.96) 55%,
+    rgba(15, 24, 48, 0.98) 100%
+  );
+  border-color: #2a3550;
+  box-shadow:
+    0 4px 24px rgba(0, 0, 0, 0.55),
+    0 1px 3px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.4);
+}
+html[data-theme="dark"] .theme-toggle:hover {
+  background: radial-gradient(
+    circle at 30% 30%,
+    rgba(44, 55, 88, 0.99) 0%,
+    rgba(28, 38, 65, 0.96) 55%,
+    rgba(20, 30, 55, 0.98) 100%
+  );
+  box-shadow:
+    0 10px 36px rgba(0, 0, 0, 0.7),
+    0 2px 6px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.4);
+}
+html[data-theme="dark"] .theme-icon {
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.5));
 }
 
 @media (max-width: 640px) {
   .theme-toggle {
     top: 14px;
     right: 14px;
-    width: 42px;
-    height: 42px;
-    font-size: 19px;
+    width: 46px;
+    height: 46px;
+    font-size: 20px;
   }
+  .theme-icon { font-size: 20px; }
 }
 
 /* ============================================================
@@ -1308,16 +1406,6 @@ html[data-theme="dark"] body {
   color: var(--ink);
 }
 
-html[data-theme="dark"] .theme-toggle {
-  background: #1a2238;
-  border-color: #2a3550;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
-}
-html[data-theme="dark"] .theme-toggle:hover {
-  background: #202a44;
-  box-shadow: 0 6px 26px rgba(0, 0, 0, 0.65);
-}
-
 html[data-theme="dark"] .camera-section,
 html[data-theme="dark"] .preview-section,
 html[data-theme="dark"] .editor-workspace,
@@ -1337,19 +1425,13 @@ html[data-theme="dark"] .film-brand-text strong,
 html[data-theme="dark"] .film-caption p {
   color: #e8ecf5;
 }
-html[data-theme="dark"] .film-caption span {
-  color: #8a9bbf;
-}
-html[data-theme="dark"] .film-image {
-  background: #0f1830;
-}
+html[data-theme="dark"] .film-caption span { color: #8a9bbf; }
+html[data-theme="dark"] .film-image { background: #0f1830; }
 html[data-theme="dark"] .film-image .preview-placeholder {
   background: #0f1830;
   color: #8a9bbf;
 }
-html[data-theme="dark"] .film-brand {
-  border-bottom-color: #4db8ff;
-}
+html[data-theme="dark"] .film-brand { border-bottom-color: #4db8ff; }
 html[data-theme="dark"] .film-footer {
   border-top-color: #4db8ff;
   color: #4a9dff;
@@ -1371,9 +1453,7 @@ html[data-theme="dark"] .print-controls label,
 html[data-theme="dark"] .range-label {
   color: #e8ecf5;
 }
-html[data-theme="dark"] .range-label span {
-  color: #4a9dff;
-}
+html[data-theme="dark"] .range-label span { color: #4a9dff; }
 
 html[data-theme="dark"] .camera-frame {
   background: #060d1e;
@@ -1382,12 +1462,8 @@ html[data-theme="dark"] .camera-frame {
 html[data-theme="dark"] .placeholder {
   background: linear-gradient(145deg, #1a2238, #0f1830);
 }
-html[data-theme="dark"] .placeholder h3 {
-  color: #e8ecf5;
-}
-html[data-theme="dark"] .placeholder p {
-  color: #8a9bbf;
-}
+html[data-theme="dark"] .placeholder h3 { color: #e8ecf5; }
+html[data-theme="dark"] .placeholder p { color: #8a9bbf; }
 
 html[data-theme="dark"] .grid-option,
 html[data-theme="dark"] .timer-option {
@@ -1396,9 +1472,7 @@ html[data-theme="dark"] .timer-option {
   color: #e8ecf5;
 }
 html[data-theme="dark"] .grid-option small,
-html[data-theme="dark"] .timer-option span {
-  color: #8a9bbf;
-}
+html[data-theme="dark"] .timer-option span { color: #8a9bbf; }
 html[data-theme="dark"] .grid-option.selected,
 html[data-theme="dark"] .timer-option.selected {
   background: #1e3a6a;
@@ -1408,31 +1482,21 @@ html[data-theme="dark"] .grid-option:hover:not(:disabled),
 html[data-theme="dark"] .timer-option:hover:not(:disabled) {
   border-color: #4a9dff;
 }
-html[data-theme="dark"] .grid-icon {
-  background: #0a1224;
-}
+html[data-theme="dark"] .grid-icon { background: #0a1224; }
 
 html[data-theme="dark"] .ratio-option {
   background: #131b33;
   border-color: #2a3550;
 }
-html[data-theme="dark"] .ratio-option strong {
-  color: #4a9dff;
-}
-html[data-theme="dark"] .ratio-option small {
-  color: #8a9bbf;
-}
+html[data-theme="dark"] .ratio-option strong { color: #4a9dff; }
+html[data-theme="dark"] .ratio-option small { color: #8a9bbf; }
 html[data-theme="dark"] .ratio-option.selected {
   background: #1e3a6a;
   border-color: #4a9dff;
 }
-html[data-theme="dark"] .ratio-option:hover:not(:disabled) {
-  border-color: #4a9dff;
-}
+html[data-theme="dark"] .ratio-option:hover:not(:disabled) { border-color: #4a9dff; }
 
-html[data-theme="dark"] .progress-track {
-  background: #131b33;
-}
+html[data-theme="dark"] .progress-track { background: #131b33; }
 html[data-theme="dark"] .step {
   color: #8a9bbf;
   border-color: #2a3550;
@@ -1478,19 +1542,11 @@ html[data-theme="dark"] .editor-canvas-wrap {
   background: #0f1830;
   border-color: #2a3550;
 }
-html[data-theme="dark"] .editor-empty {
-  background: #0f1830;
-}
-html[data-theme="dark"] .editor-empty h3 {
-  color: #e8ecf5;
-}
-html[data-theme="dark"] .editor-empty p {
-  color: #8a9bbf;
-}
+html[data-theme="dark"] .editor-empty { background: #0f1830; }
+html[data-theme="dark"] .editor-empty h3 { color: #e8ecf5; }
+html[data-theme="dark"] .editor-empty p { color: #8a9bbf; }
 
-html[data-theme="dark"] .filter-option {
-  color: #e8ecf5;
-}
+html[data-theme="dark"] .filter-option { color: #e8ecf5; }
 html[data-theme="dark"] .filter-option.selected {
   background: #1e3a6a;
   border-color: #4a9dff;
@@ -1516,26 +1572,18 @@ html[data-theme="dark"] .qr-modal-content {
   background: #1a2238;
   color: #e8ecf5;
 }
-html[data-theme="dark"] .qr-modal-content h3 {
-  color: #4a9dff;
-}
-html[data-theme="dark"] .qr-modal-content > p {
-  color: #8a9bbf;
-}
+html[data-theme="dark"] .qr-modal-content h3 { color: #4a9dff; }
+html[data-theme="dark"] .qr-modal-content > p { color: #8a9bbf; }
 html[data-theme="dark"] .qr-close {
   background: #131b33;
   color: #e8ecf5;
 }
-html[data-theme="dark"] .qr-close:hover {
-  background: #1e2840;
-}
+html[data-theme="dark"] .qr-close:hover { background: #1e2840; }
 html[data-theme="dark"] #qrContainer {
   background: #0a1224;
   border-color: #2a3550;
 }
-html[data-theme="dark"] #qrcode {
-  background: white;
-}
+html[data-theme="dark"] #qrcode { background: white; }
 html[data-theme="dark"] .qr-url-text {
   background: #0f1830;
   border-color: #2a3550;
@@ -1546,9 +1594,7 @@ html[data-theme="dark"] .qr-actions .button.secondary {
   border-color: #2a3550;
   color: #e8ecf5;
 }
-html[data-theme="dark"] #qrStatus {
-  color: #8a9bbf;
-}
+html[data-theme="dark"] #qrStatus { color: #8a9bbf; }
 
 html[data-theme="dark"] .qrg-tab {
   background: #131b33;
@@ -1570,91 +1616,47 @@ html[data-theme="dark"] .qrg-dropzone.is-dragover {
   background: #1e2840;
   border-color: #4a9dff;
 }
-html[data-theme="dark"] .qrg-dropzone-title {
-  color: #e8ecf5;
-}
-html[data-theme="dark"] .qrg-dropzone-hint {
-  color: #8a9bbf;
-}
-html[data-theme="dark"] .qrg-dropzone-icon {
-  color: #4a9dff;
-}
+html[data-theme="dark"] .qrg-dropzone-title { color: #e8ecf5; }
+html[data-theme="dark"] .qrg-dropzone-hint { color: #8a9bbf; }
+html[data-theme="dark"] .qrg-dropzone-icon { color: #4a9dff; }
 html[data-theme="dark"] .qrg-preview {
   background: #0f1830;
   border-color: #2a3550;
 }
-html[data-theme="dark"] .qrg-preview-empty {
-  color: #8a9bbf;
-}
-html[data-theme="dark"] .qrg-preview-empty span {
-  color: #4a9dff;
-}
+html[data-theme="dark"] .qrg-preview-empty { color: #8a9bbf; }
+html[data-theme="dark"] .qrg-preview-empty span { color: #4a9dff; }
 html[data-theme="dark"] .qrg-qr-stage {
   background: #131b33;
   border-color: #2a3550;
 }
-html[data-theme="dark"] .qrg-qr-container {
-  background: white;
-}
-html[data-theme="dark"] .qrg-qr-empty {
-  color: #8a9bbf;
-}
+html[data-theme="dark"] .qrg-qr-container { background: white; }
+html[data-theme="dark"] .qrg-qr-empty { color: #8a9bbf; }
 html[data-theme="dark"] .qrg-target {
   background: #1a2c50;
   color: #7dc4ff;
 }
-html[data-theme="dark"] .qrg-meta-row {
-  border-bottom-color: #2a3550;
-}
-html[data-theme="dark"] .qrg-meta-row dd {
-  color: #e8ecf5;
-}
-html[data-theme="dark"] .qrg-meta-row dt {
-  color: #8a9bbf;
-}
-html[data-theme="dark"] .qrg-checkbox {
-  color: #e8ecf5;
-}
-html[data-theme="dark"] .qrg-help {
-  color: #8a9bbf;
-}
-html[data-theme="dark"] .qrg-label {
-  color: #e8ecf5;
-}
-html[data-theme="dark"] .qrg-note {
-  color: #8a9bbf;
-}
+html[data-theme="dark"] .qrg-meta-row { border-bottom-color: #2a3550; }
+html[data-theme="dark"] .qrg-meta-row dd { color: #e8ecf5; }
+html[data-theme="dark"] .qrg-meta-row dt { color: #8a9bbf; }
+html[data-theme="dark"] .qrg-checkbox { color: #e8ecf5; }
+html[data-theme="dark"] .qrg-help { color: #8a9bbf; }
+html[data-theme="dark"] .qrg-label { color: #e8ecf5; }
+html[data-theme="dark"] .qrg-note { color: #8a9bbf; }
 
-html[data-theme="dark"] .qrg-message-status {
-  color: #7dc4ff;
-  background: #1a2c50;
-}
-html[data-theme="dark"] .qrg-message-success {
-  color: #81e6b2;
-  background: #0f3324;
-}
-html[data-theme="dark"] .qrg-message-warning {
-  color: #f5dba5;
-  background: #3a2a0f;
-}
-html[data-theme="dark"] .qrg-message-error {
-  color: #ff9999;
-  background: #3d1418;
-}
+html[data-theme="dark"] .qrg-message-status { color: #7dc4ff; background: #1a2c50; }
+html[data-theme="dark"] .qrg-message-success { color: #81e6b2; background: #0f3324; }
+html[data-theme="dark"] .qrg-message-warning { color: #f5dba5; background: #3a2a0f; }
+html[data-theme="dark"] .qrg-message-error { color: #ff9999; background: #3d1418; }
 
-html[data-theme="dark"] .qrg-preview-img {
-  background: #0a1224;
-}
-
-html[data-theme="dark"] .site-footer {
-  background: #04081a;
-}
+html[data-theme="dark"] .qrg-preview-img { background: #0a1224; }
+html[data-theme="dark"] .site-footer { background: #04081a; }
 </style>
 </head>
 <body>
 
   <button id="themeToggle" class="theme-toggle" type="button"
           aria-label="Toggle theme" title="Toggle dark/light mode">
+    <span class="theme-ring" aria-hidden="true"></span>
     <span class="theme-icon">🌙</span>
   </button>
 
@@ -2536,11 +2538,6 @@ document.addEventListener("DOMContentLoaded", () => {
   function updateStatus(message) { status.textContent = message; }
   function updateEditorStatus(message) { editorStatus.textContent = message; }
 
-  /* ============================================================
-     FIX: Lock aspect ratio buttons once a collage exists.
-     This prevents the film preview, downloaded image, and print
-     template from ever showing different ratios.
-     ============================================================ */
   function updateControls() {
     captureButton.disabled = !cameraReady || busy;
     retakeButton.disabled = busy || photos.length === 0;
@@ -4390,7 +4387,17 @@ document.addEventListener("DOMContentLoaded", () => {
 
     toggle.addEventListener("click", () => {
       const current = document.documentElement.getAttribute("data-theme") || "light";
-      applyTheme(current === "dark" ? "light" : "dark");
+      const next = current === "dark" ? "light" : "dark";
+
+      // pulse ring
+      toggle.classList.remove("is-pulsing");
+      void toggle.offsetWidth;
+      toggle.classList.add("is-pulsing");
+
+      // icon swap animation
+      toggle.classList.add("is-switching");
+      setTimeout(() => applyTheme(next), 250);
+      setTimeout(() => toggle.classList.remove("is-switching"), 600);
     });
 
     if (window.matchMedia) {
@@ -4413,6 +4420,81 @@ document.addEventListener("DOMContentLoaded", () => {
     document.addEventListener("DOMContentLoaded", init);
   } else {
     init();
+  }
+})();
+</script>
+
+<script>
+(function () {
+  "use strict";
+
+  function buildFavicon() {
+    const links = document.querySelectorAll('link[rel="icon"], link[rel="shortcut icon"]');
+    if (!links.length) return;
+
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+
+    img.onload = function () {
+      try {
+        const size = 64;
+        const c = document.createElement("canvas");
+        c.width = size;
+        c.height = size;
+        const cx = c.getContext("2d");
+
+        // outer glow
+        cx.shadowColor = "rgba(25, 212, 255, 0.7)";
+        cx.shadowBlur = 5;
+
+        // white circular bg
+        cx.beginPath();
+        cx.arc(size / 2, size / 2, size / 2 - 2, 0, Math.PI * 2);
+        cx.fillStyle = "#ffffff";
+        cx.fill();
+        cx.shadowBlur = 0;
+
+        // cyan ring
+        cx.beginPath();
+        cx.arc(size / 2, size / 2, size / 2 - 2, 0, Math.PI * 2);
+        cx.strokeStyle = "#19d4ff";
+        cx.lineWidth = 4;
+        cx.stroke();
+
+        // draw logo clipped to inner circle
+        cx.save();
+        cx.beginPath();
+        cx.arc(size / 2, size / 2, size / 2 - 6, 0, Math.PI * 2);
+        cx.clip();
+        const pad = 6;
+        const avail = size - pad * 2;
+        const scale = Math.min(avail / img.width, avail / img.height);
+        const w = img.width * scale;
+        const h = img.height * scale;
+        cx.drawImage(img, (size - w) / 2, (size - h) / 2, w, h);
+        cx.restore();
+
+        const url = c.toDataURL("image/png");
+        links.forEach(link => {
+          link.href = url;
+          link.type = "image/png";
+        });
+      } catch (e) {
+        // silently keep the static favicon
+      }
+    };
+
+    img.onerror = function () {
+      // keep static favicon
+    };
+
+    img.src = "./NEXTGEN%20LOGO.jpg";
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", buildFavicon);
+  } else {
+    buildFavicon();
   }
 })();
 </script>
