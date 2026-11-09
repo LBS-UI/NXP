@@ -22,7 +22,6 @@
   --muted: #667da4;
   --border: #cfdef5;
 
-  /* SnapStudio-compatible aliases pointing at NEXTGEN values */
   --bg: #f0f6ff;
   --panel: rgba(255,255,255,.96);
   --panel2: #f8fbff;
@@ -392,7 +391,6 @@ input[type="range"] { accent-color: var(--blue); }
   50%      { box-shadow: 0 0 0 6px rgba(25, 212, 255, 0.15); }
 }
 
-/* Scroll-reveal */
 .scroll-reveal {
   opacity: 0;
   transform: translateY(24px);
@@ -411,7 +409,6 @@ input[type="range"] { accent-color: var(--blue); }
 .scroll-reveal.from-right { transform: translateX(24px); }
 .scroll-reveal.from-right.revealed { transform: translateX(0); }
 
-/* Typing cursor */
 .typing-text::after {
   content: "|";
   display: inline-block;
@@ -420,12 +417,10 @@ input[type="range"] { accent-color: var(--blue); }
   animation: blink-caret 0.7s step-end infinite;
 }
 
-/* QR appear */
 .qr-appear {
   animation: qr-fade-in 0.55s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-/* Ratio badge — floating in top-right of #previewWrap */
 .ratio-badge {
   position: absolute;
   top: 12px;
@@ -453,10 +448,8 @@ input[type="range"] { accent-color: var(--blue); }
   animation: badge-pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-/* Jump-to-QR button */
 .jump-qr-btn { animation: fade-up 0.4s ease-out; }
 
-/* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
@@ -466,7 +459,6 @@ input[type="range"] { accent-color: var(--blue); }
   .scroll-reveal { opacity: 1 !important; transform: none !important; }
 }
 
-/* Responsive tweaks */
 @media (max-width: 640px) {
   header { padding: 1.15rem 1rem; }
   .container { padding: 1.25rem 0.9rem 2rem; }
@@ -587,10 +579,15 @@ const CF_WORKER_URL = "YOUR_WORKER_URL_HERE";   // e.g. https://snapstudio-uploa
 let stream = null;
 const isMobileDevice = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 let facingMode = isMobileDevice ? "environment" : "user";
-let sourceImage = null;          // HTMLImageElement or video frame drawn
+let sourceImage = null;          // points at the offscreen pristine canvas
 let photoReady = false;
 let currentBlob = null;
 let currentBlobUrl = null;
+
+/* Offscreen canvas holding the pristine full-resolution source.
+   Prevents drawing the visible canvas onto itself, which blanks it. */
+const originalCanvas = document.createElement("canvas");
+const originalCtx = originalCanvas.getContext("2d");
 
 const preview = document.getElementById("preview");
 const canvas = document.getElementById("canvas");
@@ -732,28 +729,41 @@ document.getElementById("flipBtn").addEventListener("click", () => {
 
 /* ========== CAPTURE / FILE ========== */
 function drawToCanvas(source, w, h) {
-  canvas.width = w;
-  canvas.height = h;
-  ctx.drawImage(source, 0, 0, w, h);
+  // Draw the full-resolution source into the OFFSCREEN canvas.
+  originalCanvas.width = w;
+  originalCanvas.height = h;
+  originalCtx.drawImage(source, 0, 0, w, h);
+
   preview.style.display = "none";
   canvas.style.display = "block";
   photoReady = true;
-  sourceImage = canvas; // use canvas as source for re-renders
+
+  // Re-renders read from the offscreen canvas, never from the visible one.
+  sourceImage = originalCanvas;
+
   editControls.style.display = "flex";
   generateQRBtn.disabled = false;
-  renderImage(); // initial render
+  renderImage();
 }
 
-document.getElementById("captureBtn").addEventListener("click", () => {
+document.getElementById("captureBtn").addEventListener("click", async () => {
   if (!preview.videoWidth || preview.readyState < 2) {
     setStatus("Camera not ready yet — wait a moment and try again", "error");
     return;
   }
-  // Draw on next frame to avoid black image
-  requestAnimationFrame(() => {
-    drawToCanvas(preview, preview.videoWidth, preview.videoHeight);
-    setStatus("Photo captured — adjust crop & format", "success");
-  });
+
+  // Use requestVideoFrameCallback when available — it fires AFTER the browser
+  // has actually painted a frame, so we never grab a stale/black buffer.
+  if ("requestVideoFrameCallback" in preview) {
+    await new Promise(function (resolve) {
+      preview.requestVideoFrameCallback(function () { resolve(); });
+    });
+  } else {
+    await new Promise(function (resolve) { setTimeout(resolve, 150); });
+  }
+
+  drawToCanvas(preview, preview.videoWidth, preview.videoHeight);
+  setStatus("Photo captured — adjust crop & format", "success");
 });
 
 document.getElementById("fileInput").addEventListener("change", (e) => {
@@ -1004,8 +1014,6 @@ downloadQRBtn.addEventListener("click", () => {
 
 <!-- ============================================================
      ADDITIVE ENHANCEMENTS SCRIPT
-     Does NOT touch any existing function, variable, or DOM element
-     from the working script above. Everything is additive.
      ============================================================ -->
 <script>
 (function () {
