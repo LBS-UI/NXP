@@ -409,7 +409,7 @@ async function uploadToTemporaryHost(blob, ext) {
   const form = new FormData();
   form.append("file", new File([blob], `snapstudio.${ext}`, { type: blob.type }));
 
-  const res = await fetch("https://0x0.st", {
+  const res = await fetch("https://tmpfiles.org/api/v1/upload", {
     method: "POST",
     body: form
   });
@@ -418,12 +418,14 @@ async function uploadToTemporaryHost(blob, ext) {
     throw new Error(`Temporary upload failed (${res.status})`);
   }
 
-  const publicURL = (await res.text()).trim();
-  if (!publicURL.startsWith("http")) {
-    throw new Error("Temporary host returned an invalid URL");
+  const data = await res.json();
+  if (data.status !== "success" || !data.data?.url) {
+    throw new Error("Temporary host returned an unexpected response");
   }
 
-  return { publicURL, provider: "temporary host (0x0.st)" };
+  // Convert page URL to direct download URL
+  const publicURL = data.data.url.replace("tmpfiles.org/", "tmpfiles.org/dl/");
+  return { publicURL, provider: "temporary host (tmpfiles.org)" };
 }
 
 function showQR(publicURL, provider) {
