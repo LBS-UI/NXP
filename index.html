@@ -1,160 +1,3361 @@
-<!-- QR container (put this in your HTML body) -->
-<div id="qrContainer" style="display:none; text-align:center; margin-top:1rem;">
-  <h3 style="margin:0 0 0.5rem;font-size:1.1rem">Share this image</h3>
-  <div id="qrcode"></div>
-  <p style="margin:0.75rem 0 0.25rem;font-size:0.9rem;color:#9aa0aa">
-    Scan the QR code with any phone camera. It opens the image in the browser so anyone can save it.
-  </p>
-  <p style="margin:0.5rem 0 0;font-size:0.9rem">
-    Or open / share this direct link:<br>
-    <a id="imageLink" href="#" target="_blank" rel="noopener" style="color:#93c5fd;word-break:break-all"></a>
-  </p>
-  <div style="margin-top:0.75rem">
-    <img id="imagePreview" alt="Uploaded image preview" style="max-width:100%;max-height:240px;border-radius:8px;display:none" />
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#061640">
+  <title>NEXTGEN Smart Classroom Photobooth</title>
+  
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Orbitron:wght@500;600;700;800;900&display=swap');
+
+:root {
+  --navy: #061640;
+  --navy-light: #0b2863;
+  --blue: #0868e9;
+  --electric: #168fff;
+  --cyan: #19d4ff;
+  --background: #f0f6ff;
+  --ink: #102653;
+  --muted: #667da4;
+  --border: #cfdef5;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+
+body {
+  margin: 0;
+  color: var(--ink);
+  background: radial-gradient(ellipse at top left, #d9edff, transparent 38%), var(--background);
+  font-family: 'Inter', sans-serif;
+  text-align: center;
+}
+
+button, input { font: inherit; }
+button { -webkit-tap-highlight-color: transparent; }
+button:focus-visible, input:focus-visible { outline: 3px solid var(--cyan); outline-offset: 3px; }
+button:disabled { opacity: .45 !important; cursor: not-allowed !important; transform: none !important; }
+.hidden { display: none !important; }
+
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes page-fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes float-logo { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+@keyframes rotate-glow { from { transform: rotate(0); } to { transform: rotate(360deg); } }
+@keyframes blink-caret { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+@keyframes camera-pulse { 0%, 100% { box-shadow: 0 0 0 0 #19d4ff40; } 50% { box-shadow: 0 0 0 10px #19d4ff00; } }
+@keyframes countdown-pop { 0% { transform: scale(0.4); opacity: 0; } 50% { transform: scale(1.15); opacity: 1; } 100% { transform: scale(1); opacity: 1; } }
+@keyframes modal-in { from { opacity: 0; transform: translateY(30px) scale(0.94); } to { opacity: 1; transform: translateY(0) scale(1); } }
+@keyframes modal-backdrop-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes shake { 0%, 100% { transform: translateX(0); } 20% { transform: translateX(-7px); } 40% { transform: translateX(7px); } 60% { transform: translateX(-4px); } 80% { transform: translateX(4px); } }
+@keyframes success-bounce { 0% { transform: scale(1); } 35% { transform: scale(1.06); } 70% { transform: scale(0.97); } 100% { transform: scale(1); } }
+@keyframes flash-white { 0% { opacity: .95; } 100% { opacity: 0; } }
+@keyframes badge-pulse { 0%, 100% { box-shadow: 0 2px 8px rgba(25,212,255,.25); } 50% { box-shadow: 0 2px 14px rgba(25,212,255,.55); } }
+
+.typing-text::after {
+  content: '|';
+  display: inline-block;
+  margin-left: 2px;
+  color: currentColor;
+  font-weight: 300;
+  animation: blink-caret 0.7s step-end infinite;
+}
+
+.welcome-logo { animation: float-logo 4s ease-in-out infinite; }
+.welcome-glow { animation: rotate-glow 30s linear infinite; }
+.welcome-divider { animation: fade-in 0.6s ease-out 1.8s both; }
+.welcome-button { animation: fade-in 0.6s ease-out 2.5s both; }
+.welcome-qr-button { animation: fade-in 0.6s ease-out 2.7s both; }
+.welcome-features { animation: fade-in 0.6s ease-out 3s both; }
+
+.scroll-reveal {
+  opacity: 0;
+  transform: translateY(28px);
+  transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+  transition-delay: var(--reveal-delay, 0s);
+  will-change: opacity, transform;
+}
+.scroll-reveal.revealed { opacity: 1; transform: translateY(0); }
+.scroll-reveal.from-left { transform: translateX(-30px); }
+.scroll-reveal.from-left.revealed { transform: translateX(0); }
+.scroll-reveal.from-right { transform: translateX(30px); }
+.scroll-reveal.from-right.revealed { transform: translateX(0); }
+
+.countdown:not(.hidden) { animation: countdown-pop 0.35s ease-out; }
+.camera-frame.is-active { animation: camera-pulse 2.5s ease-in-out infinite; }
+.status { animation: fade-in 0.3s ease-out; }
+.message-shake { animation: shake 0.4s ease-out; }
+.message-success { animation: success-bounce 0.6s ease-out; }
+
+.camera-section, .preview-section, .editor-workspace, .qrg-card {
+  transition: box-shadow 0.3s ease, transform 0.3s ease;
+}
+.camera-section:hover, .preview-section:hover,
+.editor-workspace:hover, .qrg-card:hover {
+  box-shadow: 0 16px 42px #0b398e14;
+}
+
+.button { position: relative; overflow: hidden; }
+.button::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at center, rgba(255,255,255,.35), transparent 65%);
+  opacity: 0;
+  transition: opacity 0.25s ease;
+  pointer-events: none;
+}
+.button:hover:not(:disabled)::after { opacity: 1; }
+.button:active:not(:disabled) { transform: scale(0.97); }
+
+.qr-modal:not(.hidden) { animation: modal-backdrop-in 0.25s ease-out; }
+.qr-modal:not(.hidden) .qr-modal-content { animation: modal-in 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); }
+#qrImage { animation: fade-in 0.35s ease-out; }
+
+.qr-url-wrap { margin: 0 0 12px; text-align: left; }
+.qr-url-wrap .qr-url-label { font-size: 10px; color: var(--muted); margin: 0 0 4px; font-weight: 700; }
+.qr-url-text {
+  font-size: 10px; color: var(--blue);
+  margin: 0; word-break: break-all; user-select: all;
+  padding: 8px 10px; background: #f8fbff;
+  border-radius: 6px; border: 1px solid var(--border);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  .scroll-reveal { opacity: 1 !important; transform: none !important; }
+}
+
+.page { display: none; min-height: 100vh; }
+.page.active { display: block; animation: page-fade-in 0.35s ease-out; }
+#editorPage.active { display: flex; flex-direction: column; }
+#editorPage .site-footer { width: 100%; margin-top: auto; }
+
+.welcome-page {
+  position: relative;
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh; min-height: 100dvh;
+  overflow: hidden;
+  padding: 50px 20px 30px;
+  color: white;
+  background:
+    radial-gradient(ellipse at 50% 30%, #1055b8 0%, transparent 48%),
+    linear-gradient(145deg, #020a22, #061640 55%, #092d72);
+}
+.welcome-page.active { display: flex; }
+.welcome-glow {
+  position: absolute;
+  width: min(80vw, 620px); aspect-ratio: 1;
+  border: 1px solid #19d4ff30; border-radius: 50%;
+  box-shadow: 0 0 0 40px #19d4ff08, 0 0 0 80px #19d4ff05;
+  pointer-events: none;
+}
+.welcome-content { position: relative; z-index: 1; width: min(620px, 100%); }
+.welcome-logo {
+  display: grid; place-items: center;
+  width: 116px; height: 116px;
+  margin: 0 auto 32px;
+  overflow: hidden;
+  border: 3px solid var(--cyan); border-radius: 50%;
+  background: white;
+  box-shadow: 0 0 35px #19d4ff35;
+}
+.welcome-logo img { display: block; width: 100%; height: 100%; object-fit: contain; }
+.eyebrow {
+  position: relative; margin: 0;
+  color: var(--cyan);
+  font-family: 'Orbitron', sans-serif;
+  font-size: 10px; font-weight: 700; letter-spacing: 3px;
+}
+.welcome-page h1 {
+  margin: 22px 0 14px;
+  font-family: 'Orbitron', sans-serif;
+  font-size: clamp(31px, 7vw, 60px);
+  font-weight: 900; line-height: 1.2; letter-spacing: -2px;
+  min-height: 2.4em;
+}
+.welcome-page h1 .line2 { color: var(--cyan); }
+.welcome-subtitle { color: #d4e9ff; font-size: 15px; min-height: 1.5em; }
+.welcome-divider {
+  width: 85px; height: 3px; margin: 25px auto;
+  background: var(--cyan); box-shadow: 0 0 18px #19d4ff80;
+}
+.welcome-description {
+  max-width: 410px; margin: 0 auto 30px;
+  color: #b9cce9; font-size: 13px; line-height: 1.9;
+  min-height: 75px;
+}
+.button {
+  display: inline-flex; justify-content: center; align-items: center; gap: 9px;
+  padding: 13px 18px;
+  border: 0; border-radius: 9px;
+  cursor: pointer;
+  font-size: 12px; font-weight: 700;
+  transition: transform .2s, box-shadow .2s, opacity .2s;
+}
+.button:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 6px 15px #0868e925; }
+.welcome-button {
+  min-width: 210px; padding: 17px 28px;
+  border: 1px solid #8eeaff; border-radius: 12px;
+  color: var(--navy);
+  background: linear-gradient(110deg, #19d4ff, #9aefff);
+  box-shadow: 0 8px 35px #19d4ff30;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 13px; letter-spacing: 1px;
+}
+.welcome-button span { font-size: 20px; }
+.welcome-qr-button {
+  margin-top: 12px; min-width: 210px;
+  border: 1px solid #9bd9ff65;
+  color: #dceeff; background: #ffffff10;
+}
+.welcome-qr-button:hover:not(:disabled) { background: #ffffff20; }
+.welcome-features {
+  display: flex; justify-content: center; flex-wrap: wrap;
+  gap: 12px 20px; margin-top: 45px;
+  color: #b9dcff; font-size: 9px; font-weight: 700; letter-spacing: 1px;
+}
+.welcome-footer {
+  position: relative; z-index: 1; margin-top: 55px;
+  color: #7898c5; font-family: 'Orbitron', sans-serif;
+  font-size: 8px; letter-spacing: 1px;
+}
+
+.header {
+  position: relative;
+  padding: 30px 20px 28px;
+  overflow: hidden;
+  color: white;
+  background: linear-gradient(130deg, #041137, #0b398e 65%, #087de5);
+  border-bottom: 4px solid var(--cyan);
+}
+.header::before, .header::after {
+  content: "";
+  position: absolute;
+  width: 180px; height: 180px;
+  border: 1px solid #36c7ff40; border-radius: 50%;
+  pointer-events: none;
+}
+.header::before { top: -110px; left: -50px; }
+.header::after { right: -70px; bottom: -135px; }
+.back-home {
+  position: relative; z-index: 2;
+  display: block; margin: 0 auto 24px;
+  padding: 9px 14px;
+  border: 1px solid #9bd9ff65; border-radius: 7px;
+  color: white; background: #ffffff10;
+  cursor: pointer;
+  font-size: 10px; font-weight: 700; letter-spacing: .5px;
+}
+.back-home:hover { background: #ffffff20; }
+.brand-label {
+  position: relative;
+  display: flex; align-items: center; justify-content: center;
+  gap: 10px; margin-bottom: 24px;
+  color: #dceeff;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 10px; font-weight: 700; letter-spacing: 2px;
+}
+.brand-symbol {
+  display: block;
+  width: 50px; height: 50px;
+  flex: 0 0 50px; overflow: hidden;
+  border: 2px solid var(--cyan); border-radius: 50%;
+  background: white;
+}
+.brand-symbol img { display: block; width: 100%; height: 100%; object-fit: contain; }
+.header h1 {
+  position: relative;
+  margin: 12px 0;
+  font-family: 'Orbitron', sans-serif;
+  font-size: clamp(25px, 5vw, 43px);
+  font-weight: 900; letter-spacing: -1px; text-transform: uppercase;
+}
+.subtitle {
+  position: relative; margin-bottom: 0;
+  color: #d4e9ff; font-size: 14px;
+  min-height: 1.5em;
+}
+.header-line {
+  width: 90px; height: 3px; margin: 22px auto 0;
+  background: var(--cyan); box-shadow: 0 0 14px #19d4ff80;
+}
+.page-indicator {
+  position: relative;
+  display: flex; justify-content: center; flex-wrap: wrap;
+  gap: 8px; margin-top: 23px;
+}
+.step {
+  padding: 7px 10px;
+  border: 1px solid #ffffff30; border-radius: 6px;
+  color: #aec5e8;
+  font-size: 8px; font-weight: 800; letter-spacing: .5px;
+}
+.step.active { border-color: #19d4ff70; color: var(--cyan); background: #19d4ff12; }
+
+.booth {
+  width: min(1120px, 94%);
+  margin: 30px auto 45px;
+  display: grid; grid-template-columns: 1.1fr .9fr;
+  gap: 25px; align-items: start;
+}
+.camera-section, .preview-section {
+  min-width: 0; padding: 22px;
+  background: rgba(255,255,255,.96);
+  border: 1px solid var(--border); border-radius: 18px;
+  box-shadow: 0 12px 35px #0b398e0c;
+}
+.camera-section { border-top: 4px solid var(--electric); }
+.preview-section { border-top: 4px solid var(--cyan); }
+.section-heading {
+  display: flex; align-items: center; gap: 12px;
+  margin-bottom: 22px; text-align: left;
+}
+.section-number {
+  display: grid; place-items: center; flex-shrink: 0;
+  width: 42px; height: 42px; border-radius: 10px;
+  color: white;
+  background: linear-gradient(135deg, #0756d7, #168fff);
+  font-family: 'Orbitron', sans-serif;
+  font-size: 13px; font-weight: 800;
+}
+.section-number.cyan { color: var(--navy); background: linear-gradient(135deg, #b5f4ff, var(--cyan)); }
+.section-heading h2 { margin: 0 0 5px; color: var(--navy); font-family: 'Orbitron', sans-serif; font-size: 15px; }
+.section-heading p { margin: 0; color: var(--muted); font-size: 11px; }
+.camera-frame {
+  position: relative;
+  width: 100%; aspect-ratio: 4 / 3;
+  overflow: hidden;
+  border: 3px solid #d9e8ff; border-radius: 12px;
+  background: #dce9fb;
+}
+#camera { display: block; width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
+.placeholder {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column;
+  justify-content: center; align-items: center;
+  gap: 10px; padding: 15px;
+  background: linear-gradient(145deg, #eaf4ff, #cfe5ff);
+}
+.placeholder p, .placeholder h3 { margin: 0; }
+.placeholder h3 { color: var(--navy); font-size: 15px; }
+.placeholder p { color: var(--muted); font-size: 12px; }
+.camera-icon { color: var(--blue); font-size: 48px; }
+.countdown {
+  position: absolute; inset: 0; z-index: 3;
+  display: grid; place-items: center;
+  color: white; background: #06164070;
+  font-family: 'Orbitron', sans-serif;
+  font-size: clamp(65px, 12vw, 100px); font-weight: 900;
+  text-shadow: 0 0 25px var(--cyan);
+}
+.flash {
+  position: absolute; inset: 0; z-index: 2;
+  background: white; opacity: 0; pointer-events: none;
+}
+.flash.active { animation: flash-white .25s ease-out; }
+.status { min-height: 20px; margin: 16px 0; color: var(--muted); font-size: 12px; }
+.grid-selector, .countdown-selector { margin: 20px 0; text-align: left; }
+.grid-heading {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 8px; margin-bottom: 12px;
+}
+.grid-heading label { color: var(--ink); font-size: 11px; font-weight: 800; }
+.selection-hint { color: var(--muted); font-size: 9px; font-weight: 700; }
+.grid-options { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.grid-option {
+  min-width: 0; padding: 12px 5px 10px;
+  display: flex; flex-direction: column; align-items: center; gap: 7px;
+  border: 1px solid var(--border); border-radius: 10px;
+  color: var(--ink); background: #f8fbff;
+  cursor: pointer;
+  transition: .2s ease;
+}
+.grid-option:hover:not(:disabled), .timer-option:hover:not(:disabled) {
+  border-color: var(--electric); transform: translateY(-2px);
+}
+.grid-option.selected, .timer-option.selected {
+  border: 2px solid var(--blue); background: #e9f3ff;
+  box-shadow: 0 0 0 2px #168fff12;
+}
+.grid-option strong { font-size: 10px; white-space: nowrap; }
+.grid-option small { color: var(--muted); font-size: 8px; text-align: center; }
+.grid-icon {
+  width: 39px; height: 43px;
+  display: grid; gap: 3px; padding: 4px;
+  border: 2px solid var(--blue); border-radius: 4px;
+  background: white;
+}
+.grid-icon i {
+  display: block; min-width: 0; min-height: 0;
+  border-radius: 1px;
+  background: linear-gradient(145deg, #168fff, #0745ad);
+}
+.one-grid { grid-template-columns: 1fr; grid-template-rows: 1fr; }
+.two-grid { grid-template-columns: 1fr; grid-template-rows: 1fr 1fr; }
+.four-grid { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; }
+.six-grid { grid-template-columns: 1fr 1fr; grid-template-rows: repeat(3, 1fr); }
+.countdown-options { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.timer-option {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 4px; min-height: 68px; padding: 10px;
+  border: 1px solid var(--border); border-radius: 10px;
+  background: #f8fbff; color: var(--navy);
+  cursor: pointer; transition: .2s ease;
+}
+.timer-option strong { font-family: 'Orbitron', sans-serif; font-size: 23px; }
+.timer-option span { font-size: 9px; font-weight: 800; letter-spacing: 1px; color: var(--muted); }
+.timer-option.selected strong, .timer-option.selected span { color: var(--blue); }
+.progress-info {
+  display: flex; justify-content: space-between; flex-wrap: wrap;
+  gap: 6px; margin-top: 14px;
+  color: var(--blue); font-size: 11px; font-weight: 700;
+}
+#progressPercent { color: var(--muted); }
+.progress-track {
+  width: 100%; height: 5px; margin-top: 8px;
+  overflow: hidden; border-radius: 20px;
+  background: #e4edfb;
+}
+.progress-bar {
+  width: 0; height: 100%; border-radius: inherit;
+  background: linear-gradient(90deg, var(--blue), var(--cyan));
+  transition: width .3s ease;
+}
+.camera-controls {
+  display: flex; justify-content: center; align-items: center;
+  flex-wrap: wrap; gap: 10px;
+}
+.primary { color: white; background: linear-gradient(110deg, #0756d7, #078cf4); }
+.secondary, .capture-button {
+  color: var(--navy); background: #e8f1ff; border: 1px solid #c8dcff;
+}
+.shutter {
+  display: inline-block; width: 13px; height: 13px;
+  border: 2px solid var(--blue); border-radius: 50%;
+  background: var(--electric);
+}
+.cancel-button {
+  color: #a32132; background: #fff0f1; border: 1px solid #efc4ca;
+}
+.helper-text { margin: 14px 0 0; color: var(--muted); font-size: 10px; }
+
+.film {
+  width: min(310px, 100%);
+  margin: 0 auto 25px;
+  padding: 12px 12px 9px;
+  background: white;
+  border: 1px solid #dce7f7;
+  box-shadow: 0 12px 28px #08265a1c;
+}
+.film-brand {
+  min-height: 45px;
+  display: flex; align-items: center; gap: 9px;
+  padding-bottom: 10px; margin-bottom: 10px;
+  border-bottom: 2px solid var(--electric);
+}
+.mini-logo {
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; width: 32px; height: 32px;
+  overflow: hidden; border-radius: 50%;
+  border: 2px solid var(--cyan); background: white;
+}
+.mini-logo img { display: block; width: 100%; height: 100%; object-fit: contain; }
+.film-brand-text { display: flex; flex-direction: column; gap: 3px; text-align: left; }
+.film-brand-text strong {
+  color: var(--navy);
+  font-family: 'Orbitron', sans-serif;
+  font-size: 10px; letter-spacing: 1px;
+}
+.film-brand-text span { color: var(--blue); font-size: 7px; font-weight: 800; }
+.film-badge {
+  margin-left: auto; padding: 5px 6px;
+  border-radius: 4px; color: white; background: var(--blue);
+  font-family: 'Orbitron', sans-serif;
+  font-size: 7px; font-weight: 800;
+}
+
+.film-image {
+  position: relative;
+  width: 100%;
+  height: 0;
+  padding-top: 75%;
+  overflow: hidden;
+  background: #eaf2ff;
+  transition: padding-top 0.55s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.film-image[data-ratio="4:3"]  { padding-top: 75%; }
+.film-image[data-ratio="16:9"] { padding-top: 56.25%; }
+.film-image[data-ratio="1:1"]  { padding-top: 100%; }
+
+.film-image img {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.film-image .preview-placeholder {
+  position: absolute;
+  inset: 0;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 10px;
+  color: var(--muted); background: #f0f6ff;
+}
+.preview-placeholder span { color: var(--blue); font-size: 38px; }
+.preview-placeholder p { margin: 0; font-size: 11px; }
+
+.film-ratio-badge {
+  position: absolute;
+  top: 8px; right: 8px;
+  padding: 4px 9px;
+  border-radius: 6px;
+  background: rgba(6, 22, 64, 0.85);
+  color: var(--cyan);
+  font-family: 'Orbitron', sans-serif;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  z-index: 3;
+  pointer-events: none;
+  animation: badge-pulse 2.4s ease-in-out infinite;
+  transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.film-caption {
+  min-height: 78px; padding: 15px 5px 10px;
+  display: flex; flex-direction: column;
+  justify-content: center; gap: 8px;
+}
+.film-caption p {
+  margin: 0; overflow-wrap: anywhere;
+  color: var(--navy);
+  font-family: 'Orbitron', sans-serif;
+  font-size: 10px; font-weight: 700;
+}
+.film-caption span { color: var(--muted); font-size: 9px; }
+.film-footer {
+  min-height: 24px;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 5px; padding-top: 8px;
+  border-top: 2px solid var(--electric);
+  color: var(--blue);
+  font-family: 'Orbitron', sans-serif;
+  font-size: 6px; font-weight: 800;
+}
+.print-controls {
+  display: flex; flex-direction: column; gap: 10px;
+  max-width: 320px; margin: 0 auto; text-align: left;
+}
+.print-controls label { color: var(--ink); font-size: 11px; font-weight: 800; }
+.print-controls input, .editor-caption-input {
+  width: 100%; padding: 13px;
+  border: 1px solid var(--border); border-radius: 9px;
+  background: #f8fbff; color: var(--ink);
+}
+.print-button {
+  width: 100%; margin-top: 5px;
+  color: white; background: linear-gradient(110deg, #0756d7, #087ff0);
+}
+.editor-button {
+  width: 100%; color: var(--navy);
+  background: linear-gradient(110deg, #b5f4ff, #60dfff);
+}
+.print-controls .secondary { width: 100%; }
+.print-note { margin: 16px 0 0; color: var(--muted); font-size: 10px; }
+
+.editor-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(290px, .85fr);
+  gap: 24px; align-items: start;
+  width: min(1180px, 94%);
+  margin: 30px auto 45px;
+  text-align: left;
+}
+.editor-workspace {
+  min-width: 0; padding: 22px;
+  border: 1px solid var(--border);
+  border-top: 4px solid var(--electric);
+  border-radius: 18px;
+  background: white;
+  box-shadow: 0 12px 35px #0b398e0c;
+}
+.editor-canvas-wrap {
+  position: relative;
+  width: 100%; max-width: 600px;
+  margin: 0 auto;
+  overflow: hidden;
+  border: 2px solid #d9e8ff; border-radius: 12px;
+  background: #eaf2ff;
+}
+#editorCanvas {
+  display: block; width: 100%; height: auto;
+  touch-action: manipulation; cursor: crosshair;
+}
+.editor-empty {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column;
+  justify-content: center; align-items: center;
+  gap: 10px; padding: 20px;
+  text-align: center;
+  background: #f0f6ff;
+}
+.editor-empty span { font-size: 48px; }
+.editor-empty h3 { margin: 0; color: var(--navy); font-size: 16px; }
+.editor-empty p { color: var(--muted); font-size: 12px; }
+.editor-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 15px; }
+.editor-actions .button { flex: 1; }
+.editor-tools {
+  display: flex; flex-direction: column;
+  gap: 16px; min-width: 0;
+}
+.tool-panel {
+  padding: 19px;
+  border: 1px solid var(--border); border-radius: 14px;
+  background: white;
+  box-shadow: 0 8px 22px #0b398e08;
+}
+.tool-panel h3 { margin: 0 0 8px; color: var(--navy); font-family: 'Orbitron', sans-serif; font-size: 13px; }
+.tool-description { margin: 7px 0 14px; color: var(--muted); font-size: 11px; line-height: 1.6; }
+.filter-grid {
+  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 9px; margin-top: 15px;
+}
+.filter-option {
+  display: flex; min-width: 0; flex-direction: column; align-items: center;
+  gap: 7px; padding: 6px 2px 8px;
+  border: 1px solid transparent; border-radius: 9px;
+  color: var(--ink); background: transparent;
+  cursor: pointer;
+  font-size: 9px; font-weight: 700;
+}
+.filter-option.selected { border-color: var(--blue); background: #eaf4ff; }
+.filter-swatch {
+  display: grid; place-items: center;
+  width: 49px; height: 55px;
+  border: 1px solid #cfdef5; border-radius: 7px;
+  color: #061640;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 12px; font-weight: 900;
+}
+.normal-swatch { background: linear-gradient(135deg, #e9f5ff, #168fff); }
+.gray-swatch { background: linear-gradient(135deg, #eeeeee, #444444); filter: grayscale(1); }
+.sepia-swatch { background: linear-gradient(135deg, #f2ddbc, #9a603a); }
+.warm-swatch { background: linear-gradient(135deg, #fff1c9, #ff8657); }
+.cool-swatch { background: linear-gradient(135deg, #e1f8ff, #518aff); }
+.vivid-swatch { background: linear-gradient(135deg, #ff4c8b, #6739ff); color: white; }
+.soft-swatch { background: linear-gradient(135deg, #fff6f8, #d2b9e8); }
+.dreamy-swatch { background: linear-gradient(135deg, #d5faff, #ffb8df); }
+.range-label {
+  display: flex; justify-content: space-between;
+  gap: 10px; margin: 18px 0 8px;
+  color: var(--ink); font-size: 11px; font-weight: 700;
+}
+.range-label span { color: var(--blue); font-variant-numeric: tabular-nums; }
+input[type="range"] { width: 100%; height: 6px; accent-color: var(--blue); cursor: pointer; }
+.full-button { width: 100%; margin-top: 10px; }
+.sticker-grid {
+  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px; margin: 14px 0 20px;
+}
+.sticker-option {
+  display: grid; place-items: center;
+  aspect-ratio: 1; padding: 4px;
+  border: 1px solid var(--border); border-radius: 10px;
+  background: #f6faff; cursor: pointer;
+  font-size: 27px; transition: .2s ease;
+}
+.sticker-option:hover, .sticker-option.selected {
+  transform: translateY(-2px);
+  border-color: var(--electric); background: #e4f4ff;
+  box-shadow: 0 3px 12px #0868e915;
+}
+.editor-caption-input { margin-top: 8px; }
+.editor-export { border-top: 3px solid var(--cyan); }
+.site-footer {
+  padding: 24px 15px;
+  color: #cce5ff; background: var(--navy);
+  border-top: 3px solid var(--cyan);
+  font-family: 'Orbitron', sans-serif;
+}
+.footer-circuit { margin-bottom: 12px; color: var(--cyan); font-size: 14px; }
+.site-footer p { margin: 0 0 8px; font-size: 10px; font-weight: 800; letter-spacing: 2px; }
+.site-footer > span { font-size: 8px; letter-spacing: 1px; }
+
+#printArea, #editorPrintArea { display: none; }
+
+@media print {
+  @page { size: 4in 6in; margin: 0; }
+  html, body {
+    width: 4in !important; height: 6in !important;
+    margin: 0 !important; padding: 0 !important;
+    overflow: hidden !important; background: white !important;
+  }
+  body * { visibility: hidden !important; }
+  body.print-standard #printArea, body.print-standard #printArea *,
+  body.print-editor #editorPrintArea, body.print-editor #editorPrintArea * {
+    visibility: visible !important;
+  }
+  body.print-standard #printArea {
+    position: absolute; left: 0; top: 0;
+    display: block !important;
+    width: 4in; height: 6in;
+    overflow: hidden; background: white;
+  }
+  .print-film {
+    display: flex; flex-direction: column;
+    width: 4in; height: 6in;
+    padding: .10in; overflow: hidden;
+    border: 2px solid #dfe7f3; background: white;
+  }
+  .print-brand {
+    height: .43in; flex: 0 0 .43in;
+    display: flex; align-items: center; justify-content: center;
+    gap: .10in;
+    border-bottom: 2px solid #168fff;
+    margin-bottom: .07in;
+    color: #061640;
+  }
+  .print-logo {
+    width: .31in; height: .31in;
+    overflow: hidden;
+    border: 2px solid #19d4ff; border-radius: 50%;
+  }
+  .print-logo img { display: block; width: 100%; height: 100%; object-fit: contain; }
+  .print-brand-text strong, .print-brand-text small { display: block; text-align: left; }
+  .print-brand-text strong {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 10pt; letter-spacing: 1px;
+  }
+  .print-brand-text small {
+    margin-top: 2px; color: #0868e9;
+    font-family: 'Inter', sans-serif;
+    font-size: 5pt; font-weight: 700;
+  }
+  .print-film > img {
+    display: block; width: 100%;
+    min-height: 0; flex: 1 1 0;
+    object-fit: cover; object-position: center;
+  }
+  .print-caption {
+    height: .83in; flex: 0 0 .83in;
+    padding: .07in .05in;
+    display: flex; flex-direction: column;
+    justify-content: center; align-items: center;
+    text-align: center; gap: .07in;
+    overflow: hidden; overflow-wrap: anywhere;
+  }
+  .print-caption span {
+    color: #061640;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 9pt; font-weight: 700;
+  }
+  .print-caption small {
+    color: #667da4;
+    font-family: 'Inter', sans-serif;
+    font-size: 7pt;
+  }
+  .print-footer {
+    height: .23in; flex: 0 0 .23in;
+    display: flex; justify-content: center; align-items: center;
+    border-top: 2px solid #168fff;
+    color: #0868e9;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 4.5pt; font-weight: 700;
+  }
+  body.print-editor #editorPrintArea {
+    position: absolute; left: 0; top: 0;
+    display: block !important;
+    width: 4in; height: 6in;
+    overflow: hidden; background: white;
+  }
+  body.print-editor #editorPrintImage {
+    display: block; width: 4in; height: 6in;
+    object-fit: contain;
+  }
+  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+}
+
+@media (max-width: 760px) {
+  .header { padding: 25px 15px; }
+  .brand-label { font-size: 8px; letter-spacing: 1px; }
+  .booth { width: min(520px, 94%); grid-template-columns: 1fr; gap: 18px; margin-top: 20px; }
+  .camera-section, .preview-section { padding: 16px; }
+  .grid-options { gap: 5px; }
+  .grid-option { padding-left: 2px; padding-right: 2px; }
+  .grid-option strong { font-size: 9px; }
+  .grid-option small { font-size: 7px; }
+  .button { padding: 14px 16px; }
+  .editor-layout {
+    width: min(560px, 94%); grid-template-columns: 1fr;
+    gap: 18px; margin-top: 20px;
+  }
+  .editor-workspace { padding: 16px; }
+  .editor-tools { display: grid; grid-template-columns: 1fr; }
+}
+
+@media (max-width: 420px) {
+  .welcome-page { padding-left: 16px; padding-right: 16px; }
+  .welcome-logo { width: 95px; height: 95px; }
+  .welcome-features { flex-direction: column; align-items: center; gap: 13px; }
+  .page-indicator { gap: 5px; }
+  .step { padding: 6px 7px; font-size: 7px; }
+  .grid-options { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .grid-option strong { font-size: 10px; }
+  .grid-option small { font-size: 8px; }
+  .filter-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .filter-swatch { width: 43px; height: 48px; }
+  .sticker-option { font-size: 24px; }
+  .editor-actions { flex-direction: column; }
+}
+
+.editor-select {
+  width: 100%; padding: 11px 12px;
+  border: 1px solid var(--border); border-radius: 9px;
+  background: #f8fbff; color: var(--ink);
+  font: inherit; margin-bottom: 12px;
+}
+.editor-color-input {
+  width: 100%; height: 42px; padding: 4px;
+  border: 1px solid var(--border); border-radius: 9px;
+  background: #f8fbff; margin-bottom: 12px;
+  cursor: pointer;
+}
+.text-tool-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+.text-tool-actions .button { min-width: 0; padding-left: 8px; padding-right: 8px; }
+#overlayTextInput { margin-bottom: 10px; }
+
+.ratio-selector { margin-top: 28px; }
+.ratio-options { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 12px; }
+.ratio-option {
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  padding: 16px 10px;
+  border: 2px solid var(--border); border-radius: 16px;
+  background: white; cursor: pointer;
+  transition: all .18s ease;
+}
+.ratio-option:hover:not(:disabled) { border-color: var(--blue); transform: translateY(-2px); }
+.ratio-option.selected {
+  border-color: var(--blue); background: #e8f2ff;
+  box-shadow: 0 4px 14px rgba(8, 104, 233, .18);
+}
+.ratio-option strong { font-family: 'Orbitron', sans-serif; font-size: 1.15rem; color: var(--navy); }
+.ratio-option small { color: var(--muted); font-size: .78rem; }
+
+.qr-modal {
+  position: fixed; inset: 0; z-index: 1000;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(6, 22, 64, .72);
+  backdrop-filter: blur(6px);
+  padding: 20px;
+}
+.qr-modal.hidden { display: none !important; }
+.qr-modal-content {
+  background: white; border-radius: 24px;
+  padding: 32px 28px 28px;
+  max-width: 400px; width: 100%;
+  text-align: center; position: relative;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, .3);
+}
+.qr-close {
+  position: absolute; top: 14px; right: 14px;
+  width: 36px; height: 36px;
+  border: none; border-radius: 50%;
+  background: #f0f4fa; color: var(--ink);
+  font-size: 1.1rem; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+.qr-close:hover { background: #e2eaf6; }
+.qr-modal-content h3 {
+  margin: 0 0 8px;
+  font-family: 'Orbitron', sans-serif;
+  color: var(--navy); font-size: 1.35rem;
+}
+.qr-modal-content > p {
+  margin: 0 0 20px;
+  color: var(--muted); font-size: .95rem;
+}
+#qrContainer {
+  margin: 0 auto 16px;
+  width: 280px; height: 280px;
+  border-radius: 16px;
+  overflow: hidden; background: #f8fbff;
+  display: flex; align-items: center; justify-content: center;
+  border: 1px solid var(--border);
+}
+#qrImage { width: 100%; height: 100%; object-fit: contain; }
+#qrStatus {
+  margin: 0 0 16px;
+  font-size: .9rem; color: var(--muted);
+  min-height: 1.4em;
+}
+.qr-actions { display: flex; flex-direction: column; gap: 8px; }
+.qr-actions .button { width: 100%; }
+.qr-actions a.button { text-decoration: none; }
+
+.qr-page .qr-layout {
+  width: min(1120px, 94%);
+  margin: 30px auto 45px;
+  display: grid; grid-template-columns: 1.05fr .95fr;
+  gap: 24px; align-items: start; text-align: left;
+}
+.qrg-card {
+  min-width: 0; padding: 22px;
+  background: rgba(255,255,255,.96);
+  border: 1px solid var(--border); border-radius: 18px;
+  box-shadow: 0 12px 35px #0b398e0c;
+  text-align: left;
+}
+.qrg-card h2 {
+  margin: 0 0 8px; color: var(--navy);
+  font-family: 'Orbitron', sans-serif; font-size: 15px; text-align: left;
+}
+.qrg-muted { margin: 0 0 14px; color: var(--muted); font-size: 12px; line-height: 1.7; }
+.qrg-tabs { display: flex; gap: 8px; margin: 16px 0; }
+.qrg-tab {
+  flex: 1; padding: 11px 12px;
+  border: 1px solid var(--border); border-radius: 9px;
+  color: var(--ink); background: #f8fbff;
+  cursor: pointer;
+  font-size: 11px; font-weight: 800;
+}
+.qrg-tab.is-active {
+  border-color: var(--blue); background: #e9f3ff;
+  color: var(--blue); box-shadow: 0 0 0 2px #168fff12;
+}
+.qrg-panel[hidden] { display: none !important; }
+.qrg-label {
+  display: block; margin: 12px 0 7px;
+  color: var(--ink); font-size: 11px; font-weight: 800;
+}
+.qrg-input {
+  width: 100%; padding: 13px;
+  border: 1px solid var(--border); border-radius: 9px;
+  background: #f8fbff; color: var(--ink); font: inherit;
+}
+.qrg-help { margin: 8px 0 0; color: var(--muted); font-size: 10px; line-height: 1.6; }
+.qrg-message {
+  min-height: 18px; margin: 10px 0 0;
+  padding: 9px 11px; border-radius: 8px;
+  font-size: 11px; line-height: 1.5;
+}
+.qrg-message-status { color: var(--blue); background: #eef6ff; }
+.qrg-message-success { color: #0b6b3a; background: #eafaf1; }
+.qrg-message-warning { color: #7a5200; background: #fff8e6; }
+.qrg-message-error { color: #a32132; background: #fff0f1; }
+.qrg-force { margin-top: 10px; }
+.qrg-checkbox {
+  display: flex; align-items: flex-start; gap: 8px;
+  color: var(--ink); font-size: 11px; line-height: 1.5;
+  cursor: pointer;
+}
+.qrg-checkbox input { margin-top: 2px; accent-color: var(--blue); }
+.qrg-dropzone {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 7px; min-height: 170px; padding: 22px 16px;
+  border: 2px dashed #b7cff3; border-radius: 14px;
+  background: #f8fbff; cursor: pointer;
+  text-align: center; transition: .2s ease;
+}
+.qrg-dropzone:hover, .qrg-dropzone:focus-visible, .qrg-dropzone.is-dragover {
+  border-color: var(--blue); background: #eef6ff;
+}
+.qrg-dropzone-icon { width: 34px; height: 34px; color: var(--blue); }
+.qrg-dropzone-title { margin: 0; color: var(--navy); font-size: 12px; }
+.qrg-dropzone-hint { margin: 0; color: var(--muted); font-size: 10px; }
+.qrg-preview {
+  position: relative; width: 100%; min-height: 190px;
+  display: flex; align-items: center; justify-content: center;
+  overflow: hidden;
+  border: 1px solid var(--border); border-radius: 12px;
+  background: #f0f6ff;
+}
+.qrg-preview-empty {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 8px; color: var(--muted); font-size: 12px;
+}
+.qrg-preview-empty span { color: var(--blue); font-size: 36px; }
+.qrg-preview-img {
+  display: block; width: 100%; max-height: 320px;
+  object-fit: contain; background: white;
+}
+.qrg-meta { margin: 14px 0 0; display: grid; gap: 7px; }
+.qrg-meta-row {
+  display: flex; justify-content: space-between;
+  gap: 12px; padding-bottom: 7px;
+  border-bottom: 1px solid #edf3fd;
+  font-size: 11px;
+}
+.qrg-meta-row dt { color: var(--muted); font-weight: 700; }
+.qrg-meta-row dd {
+  margin: 0; color: var(--ink); font-weight: 700;
+  overflow-wrap: anywhere; text-align: right;
+}
+.qrg-qr-stage {
+  display: grid; place-items: center;
+  min-height: 300px; padding: 14px;
+  border: 1px solid var(--border); border-radius: 16px;
+  background: #f8fbff;
+}
+#qrgCanvas { display: block; max-width: 100%; height: auto; background: white; }
+.qrg-qr-empty {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 10px; color: var(--muted); font-size: 12px; text-align: center;
+}
+.qrg-qr-empty span { color: var(--blue); font-size: 52px; line-height: 1; }
+.qrg-target {
+  margin: 12px 0; padding: 9px 11px;
+  border-radius: 8px;
+  background: #eef6ff; color: var(--blue);
+  font-size: 10px; font-weight: 700;
+  overflow-wrap: anywhere;
+}
+.qrg-block { width: 100%; margin-top: 12px; }
+.qrg-row { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; margin-top: 10px; }
+.qrg-note {
+  margin-top: 16px; color: var(--muted);
+  font-size: 10px; line-height: 1.6;
+}
+.qrg-note summary { cursor: pointer; color: var(--blue); font-weight: 800; }
+.qrg-note p { margin: 8px 0 0; }
+
+@media (max-width: 760px) {
+  .qr-page .qr-layout {
+    width: min(560px, 94%); grid-template-columns: 1fr;
+    gap: 18px; margin-top: 20px;
+  }
+  .qrg-card { padding: 16px; }
+  .qrg-row { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+  <section id="welcomePage" class="page welcome-page active">
+    <div class="welcome-glow"></div>
+    <div class="welcome-content">
+      <div class="welcome-logo">
+        <img src="./NEXTGEN%20LOGO.jpg" alt="NEXTGEN Logo">
+      </div>
+      <p class="eyebrow">INNOVATION TEAM PRESENTS</p>
+      <h1>NEXTGEN<br><span class="line2">PHOTOBOOTH</span></h1>
+      <p class="welcome-subtitle">Capture the moments. Keep it forever.</p>
+      <div class="welcome-divider"></div>
+      <p class="welcome-description">
+        Create memories, express your creativity, and make every
+        picture unforgettable.
+      </p>
+      <button id="enterBooth" class="button welcome-button">
+        START NOW <span>→</span>
+      </button>
+      <button class="button welcome-qr-button" data-page="qrGeneratorPage">
+        Image Download QR Generator
+      </button>
+      <div class="welcome-features">
+        <span>📸 TAKE PHOTOS</span>
+        <span>✨ EDIT MEMORIES</span>
+        <span>💙 KEEP FOREVER</span>
+      </div>
+    </div>
+    <footer class="welcome-footer">
+      NEXTGEN SMART CLASSROOM · POWERED BY INNOVATION
+    </footer>
+  </section>
+
+  <section id="boothPage" class="page">
+    <header class="header">
+      <button class="back-home" data-page="welcomePage">← HOME</button>
+      <div class="brand-label">
+        <div class="brand-symbol">
+          <img src="./NEXTGEN%20LOGO.jpg" alt="NEXTGEN Logo">
+        </div>
+        <span>NEXTGEN SMART CLASSROOM</span>
+      </div>
+      <p class="eyebrow">INNOVATION TEAM PRESENTS</p>
+      <h1>Instant Memories.</h1>
+      <p class="subtitle">Capture the moment. Keep it forever.</p>
+      <div class="header-line"></div>
+      <div class="page-indicator">
+        <span class="step active">01 WELCOME</span>
+        <span class="step active">02 PHOTOBOOTH</span>
+        <span class="step">03 EDITOR</span>
+      </div>
+    </header>
+
+    <main class="booth">
+      <section class="camera-section">
+        <div class="section-heading">
+          <span class="section-number">01</span>
+          <div>
+            <h2>Photo Studio</h2>
+            <p>Choose your layout and strike a pose.</p>
+          </div>
+        </div>
+
+        <div class="camera-frame">
+          <video id="camera" autoplay playsinline muted></video>
+          <div id="countdown" class="countdown hidden">3</div>
+          <div id="flash" class="flash hidden"></div>
+          <div id="cameraPlaceholder" class="placeholder">
+            <span class="camera-icon">◎</span>
+            <h3>Your memories start here</h3>
+            <p>Allow camera access to begin.</p>
+            <button id="startCamera" class="button primary">Start Camera</button>
+          </div>
+        </div>
+
+        <p id="status" class="status" role="status" aria-live="polite">
+          Ready when you are.
+        </p>
+
+        <div class="grid-selector">
+          <div class="grid-heading">
+            <label>CHOOSE YOUR PHOTO LAYOUT</label>
+            <span class="selection-hint">SELECT ONE</span>
+          </div>
+          <div class="grid-options" role="group" aria-label="Photo layout">
+            <button type="button" class="grid-option" data-count="1" aria-pressed="false">
+              <span class="grid-icon one-grid"><i></i></span>
+              <strong>1 Photo</strong>
+              <small>Single shot</small>
+            </button>
+            <button type="button" class="grid-option" data-count="2" aria-pressed="false">
+              <span class="grid-icon two-grid"><i></i><i></i></span>
+              <strong>2 Photos</strong>
+              <small>Photo strip</small>
+            </button>
+            <button type="button" class="grid-option selected" data-count="4" aria-pressed="true">
+              <span class="grid-icon four-grid"><i></i><i></i><i></i><i></i></span>
+              <strong>4 Photos</strong>
+              <small>2 × 2 collage</small>
+            </button>
+            <button type="button" class="grid-option" data-count="6" aria-pressed="false">
+              <span class="grid-icon six-grid"><i></i><i></i><i></i><i></i><i></i><i></i></span>
+              <strong>6 Photos</strong>
+              <small>Photo collage</small>
+            </button>
+          </div>
+        </div>
+
+        <div class="countdown-selector">
+          <div class="grid-heading">
+            <label>COUNTDOWN TIMER</label>
+            <span class="selection-hint">CHOOSE YOUR TIME</span>
+          </div>
+          <div class="countdown-options" role="group" aria-label="Countdown duration">
+            <button type="button" class="timer-option selected" data-seconds="3" aria-pressed="true">
+              <strong>3</strong><span>SECONDS</span>
+            </button>
+            <button type="button" class="timer-option" data-seconds="6" aria-pressed="false">
+              <strong>6</strong><span>SECONDS</span>
+            </button>
+            <button type="button" class="timer-option" data-seconds="9" aria-pressed="false">
+              <strong>9</strong><span>SECONDS</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="ratio-selector">
+          <div class="grid-heading">
+            <label>PHOTO SIZE</label>
+            <span class="selection-hint">ASPECT RATIO</span>
+          </div>
+          <div class="ratio-options" role="group" aria-label="Aspect ratio">
+            <button type="button" class="ratio-option selected" data-ratio="4:3" aria-pressed="true">
+              <strong>4:3</strong>
+              <small>Classic</small>
+            </button>
+            <button type="button" class="ratio-option" data-ratio="16:9" aria-pressed="false">
+              <strong>16:9</strong>
+              <small>Widescreen</small>
+            </button>
+            <button type="button" class="ratio-option" data-ratio="1:1" aria-pressed="false">
+              <strong>1:1</strong>
+              <small>Square</small>
+            </button>
+          </div>
+        </div>
+
+        <div class="progress-info">
+          <span id="gridStatus">Photo 1 of 4</span>
+          <span id="progressPercent">0% complete</span>
+        </div>
+        <div class="progress-track">
+          <div id="progressBar" class="progress-bar"></div>
+        </div>
+
+        <div class="camera-controls">
+          <button id="retake" class="button secondary" disabled>Start Over</button>
+          <button id="capture" class="button secondary capture-button" disabled>
+            <span class="shutter"></span>
+            Start Photo Session
+          </button>
+          <button id="cancelSession" class="button cancel-button hidden">
+            Cancel Session
+          </button>
+        </div>
+
+        <p class="helper-text">
+          Get into position! Photos will be captured automatically.
+        </p>
+      </section>
+
+      <section class="preview-section">
+        <div class="section-heading">
+          <span class="section-number cyan">02</span>
+          <div>
+            <h2>Your Photo Print</h2>
+            <p>Memories in an Instax-inspired frame.</p>
+          </div>
+        </div>
+
+        <div class="film">
+          <div class="film-brand">
+            <div class="mini-logo">
+              <img src="./NEXTGEN%20LOGO.jpg" alt="NEXTGEN Logo">
+            </div>
+            <div class="film-brand-text">
+              <strong>NEXTGEN</strong>
+              <span>SMART CLASSROOM</span>
+            </div>
+            <span class="film-badge">INSTANT</span>
+          </div>
+
+          <div class="film-image" id="filmImage" data-ratio="4:3">
+            <img id="preview" alt="Your completed photo collage">
+            <div id="previewPlaceholder" class="preview-placeholder">
+              <span>✦</span>
+              <p>Your photo will appear here</p>
+            </div>
+            <span class="film-ratio-badge" id="filmRatioBadge">4:3</span>
+          </div>
+
+          <div class="film-caption">
+            <p id="photoCaption">a moment to remember ♡</p>
+            <span id="photoDate"></span>
+          </div>
+
+          <div class="film-footer">
+            <span>INNOVATION TEAM</span>
+            <span>✦ ONE FRAME AT A TIME</span>
+          </div>
+        </div>
+
+        <div class="print-controls">
+          <label for="captionInput">PHOTO CAPTION</label>
+          <input id="captionInput" type="text" maxlength="45"
+                 placeholder="Write your own caption..."
+                 value="a moment to remember ♡">
+          <button id="print" class="button print-button" disabled>
+            Print My Photo ↗
+          </button>
+          <button id="download" class="button secondary download-button" disabled>
+            Download Photo
+          </button>
+          <button id="showQrCode" class="button secondary" disabled>
+            Show QR Code
+          </button>
+          <button id="openEditor" class="button editor-button" disabled>
+            ✨ Edit My Photo
+          </button>
+        </div>
+        <p class="print-note">Photo size follows the aspect ratio you selected.</p>
+      </section>
+    </main>
+
+    <canvas id="canvas" hidden></canvas>
+
+    <div id="qrModal" class="qr-modal hidden">
+      <div class="qr-modal-content">
+        <button id="closeQr" class="qr-close" aria-label="Close">✕</button>
+        <h3>Scan to Get Your Photo</h3>
+        <p>Point your phone camera at the QR code. The image opens in your browser — long-press it to save.</p>
+        <div id="qrContainer">
+          <img id="qrImage" alt="QR code to download photo" width="280" height="280">
+        </div>
+        <p id="qrStatus">Preparing your shareable link…</p>
+        <div id="qrUrlWrap" class="qr-url-wrap" hidden>
+          <p class="qr-url-label">IMAGE URL (tap to select):</p>
+          <p id="qrUrlText" class="qr-url-text"></p>
+        </div>
+        <div class="qr-actions">
+          <a id="qrDownloadLink" class="button secondary" href="#" target="_blank" rel="noopener" hidden>Open Image Link</a>
+          <button id="qrDownloadBtn" class="button secondary" type="button" disabled>Download QR Code</button>
+          <button id="qrCopyBtn" class="button secondary" type="button" disabled>Copy Image URL</button>
+          <button id="qrRetryBtn" class="button primary" type="button" disabled hidden>↻ Retry Upload</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="printArea" aria-hidden="true">
+      <div class="print-film">
+        <div class="print-brand">
+          <div class="print-logo">
+            <img src="./NEXTGEN%20LOGO.jpg" alt="NEXTGEN Logo">
+          </div>
+          <div class="print-brand-text">
+            <strong>NEXTGEN</strong>
+            <small>SMART CLASSROOM</small>
+          </div>
+        </div>
+        <img id="printImage" alt="Photo collage for printing">
+        <div class="print-caption">
+          <span id="printCaption">a moment to remember ♡</span>
+          <small id="printDate"></small>
+        </div>
+        <div class="print-footer">
+          INNOVATION TEAM · ONE FRAME AT A TIME
+        </div>
+      </div>
+    </div>
+
+    <footer class="site-footer">
+      <div class="footer-circuit">━━━━●━━━━━━━━●━━━━</div>
+      <p>NEXTGEN SMART CLASSROOM</p>
+      <span>MADE WITH CREATIVITY · POWERED BY INNOVATION</span>
+    </footer>
+  </section>
+
+  <section id="editorPage" class="page editor-page">
+    <header class="header editor-header">
+      <button class="back-home" data-page="boothPage">← BACK TO PHOTOBOOTH</button>
+      <div class="brand-label">
+        <div class="brand-symbol">
+          <img src="./NEXTGEN%20LOGO.jpg" alt="NEXTGEN Logo">
+        </div>
+        <span>NEXTGEN SMART CLASSROOM</span>
+      </div>
+      <p class="eyebrow">YOUR CREATIVITY, YOUR RULES</p>
+      <h1>Make It Yours.</h1>
+      <p class="subtitle">Add stickers, explore filters, and create your masterpiece.</p>
+      <div class="header-line"></div>
+      <div class="page-indicator">
+        <span class="step active">01 WELCOME</span>
+        <span class="step active">02 PHOTOBOOTH</span>
+        <span class="step active">03 EDITOR</span>
+      </div>
+    </header>
+
+    <main class="editor-layout">
+      <section class="editor-workspace">
+        <div class="section-heading">
+          <span class="section-number cyan">03</span>
+          <div>
+            <h2>Photo Editor</h2>
+            <p>Tap a sticker to add it to your photo.</p>
+          </div>
+        </div>
+
+        <div class="editor-canvas-wrap" id="editorCanvasWrap">
+          <canvas id="editorCanvas" width="900" height="1050"></canvas>
+          <div id="editorEmpty" class="editor-empty">
+            <span>📸</span>
+            <h3>Your masterpiece goes here</h3>
+            <p>Take photos in the Photo Studio first.</p>
+            <button class="button primary" data-page="boothPage">Go to Photo Studio</button>
+          </div>
+        </div>
+
+        <div class="editor-actions">
+          <button id="undoSticker" class="button secondary">↶ Undo Sticker</button>
+          <button id="clearStickers" class="button secondary">Remove Stickers</button>
+        </div>
+
+        <p id="editorStatus" class="status" role="status" aria-live="polite">
+          Choose a filter or add some stickers!
+        </p>
+      </section>
+
+      <aside class="editor-tools">
+        <div class="tool-panel">
+          <h3>🎨 Photo Filters</h3>
+          <p class="tool-description">Choose your favorite look.</p>
+          <div class="filter-grid">
+            <button class="filter-option selected" data-filter="normal">
+              <span class="filter-swatch normal-swatch">Aa</span><span>Original</span>
+            </button>
+            <button class="filter-option" data-filter="grayscale">
+              <span class="filter-swatch gray-swatch">Aa</span><span>B&W</span>
+            </button>
+            <button class="filter-option" data-filter="sepia">
+              <span class="filter-swatch sepia-swatch">Aa</span><span>Vintage</span>
+            </button>
+            <button class="filter-option" data-filter="warm">
+              <span class="filter-swatch warm-swatch">Aa</span><span>Warm</span>
+            </button>
+            <button class="filter-option" data-filter="cool">
+              <span class="filter-swatch cool-swatch">Aa</span><span>Cool</span>
+            </button>
+            <button class="filter-option" data-filter="vivid">
+              <span class="filter-swatch vivid-swatch">Aa</span><span>Vivid</span>
+            </button>
+            <button class="filter-option" data-filter="soft">
+              <span class="filter-swatch soft-swatch">Aa</span><span>Soft</span>
+            </button>
+            <button class="filter-option" data-filter="dreamy">
+              <span class="filter-swatch dreamy-swatch">Aa</span><span>Dreamy</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="tool-panel">
+          <h3>☀️ Adjustments</h3>
+          <label class="range-label" for="brightness">Brightness <span id="brightnessValue">100%</span></label>
+          <input id="brightness" type="range" min="50" max="150" value="100">
+          <label class="range-label" for="contrast">Contrast <span id="contrastValue">100%</span></label>
+          <input id="contrast" type="range" min="50" max="150" value="100">
+          <label class="range-label" for="saturation">Saturation <span id="saturationValue">100%</span></label>
+          <input id="saturation" type="range" min="0" max="200" value="100">
+          <button id="resetAdjustments" class="button secondary full-button">Reset Adjustments</button>
+        </div>
+
+        <div class="tool-panel">
+          <h3>✨ Emoji Stickers</h3>
+          <p class="tool-description">Select an emoji to place it on your photo.</p>
+          <div class="sticker-grid">
+            <button class="sticker-option" data-emoji="❤️">❤️</button>
+            <button class="sticker-option" data-emoji="😍">😍</button>
+            <button class="sticker-option" data-emoji="🥰">🥰</button>
+            <button class="sticker-option" data-emoji="✨">✨</button>
+            <button class="sticker-option" data-emoji="⭐">⭐</button>
+            <button class="sticker-option" data-emoji="💖">💖</button>
+            <button class="sticker-option" data-emoji="🌸">🌸</button>
+            <button class="sticker-option" data-emoji="🦋">🦋</button>
+            <button class="sticker-option" data-emoji="🌈">🌈</button>
+            <button class="sticker-option" data-emoji="☁️">☁️</button>
+            <button class="sticker-option" data-emoji="😎">😎</button>
+            <button class="sticker-option" data-emoji="🎀">🎀</button>
+            <button class="sticker-option" data-emoji="🎉">🎉</button>
+            <button class="sticker-option" data-emoji="💙">💙</button>
+            <button class="sticker-option" data-emoji="🔥">🔥</button>
+            <button class="sticker-option" data-emoji="👑">👑</button>
+          </div>
+          <label class="range-label" for="stickerSize">Sticker size <span id="stickerSizeValue">64px</span></label>
+          <input id="stickerSize" type="range" min="28" max="120" value="64">
+          <p class="tool-description">Tip: Click a sticker, then click your photo to place it.</p>
+        </div>
+
+        <div class="tool-panel text-overlay-panel">
+          <h3>🔤 Add Text to Photo</h3>
+          <p class="tool-description">Add text anywhere on your photo, then customize its appearance.</p>
+          <label class="range-label" for="overlayTextInput">Text</label>
+          <input id="overlayTextInput" class="editor-caption-input" type="text" maxlength="80" placeholder="Type something...">
+          <button id="addOverlayText" class="button editor-button full-button">＋ Add Text</button>
+          <label class="range-label" for="overlayTextSelect">Selected text</label>
+          <select id="overlayTextSelect" class="editor-select">
+            <option value="">No text selected</option>
+          </select>
+          <label class="range-label" for="overlayFont">Font family</label>
+          <select id="overlayFont" class="editor-select">
+            <option value="Arial">Arial</option>
+            <option value="Georgia">Georgia</option>
+            <option value="'Times New Roman'">Times New Roman</option>
+            <option value="Verdana">Verdana</option>
+            <option value="'Trebuchet MS'">Trebuchet MS</option>
+            <option value="'Courier New'">Courier New</option>
+            <option value="cursive">Cursive</option>
+          </select>
+          <label class="range-label" for="overlayFontStyle">Font style</label>
+          <select id="overlayFontStyle" class="editor-select">
+            <option value="normal">Regular</option>
+            <option value="bold">Bold</option>
+            <option value="italic">Italic</option>
+            <option value="bold italic">Bold Italic</option>
+          </select>
+          <label class="range-label" for="overlayTextColor">Text color</label>
+          <input id="overlayTextColor" class="editor-color-input" type="color" value="#ffffff">
+          <label class="range-label" for="overlayTextSize">Text size <span id="overlayTextSizeValue">48px</span></label>
+          <input id="overlayTextSize" type="range" min="18" max="120" value="48">
+          <div class="text-tool-actions">
+            <button id="updateOverlayText" class="button secondary">Apply Changes</button>
+            <button id="deleteOverlayText" class="button secondary">Delete Text</button>
+          </div>
+          <p class="tool-description">Tip: Add or select text, then click the photo to reposition it.</p>
+        </div>
+
+        <div class="tool-panel">
+          <h3>📝 Photo Caption</h3>
+          <input id="editorCaption" class="editor-caption-input" type="text" maxlength="45" placeholder="Write a caption...">
+          <button id="applyEditorCaption" class="button secondary full-button">Update Caption</button>
+        </div>
+
+        <div class="tool-panel editor-export">
+          <h3>💾 Save Your Masterpiece</h3>
+          <button id="saveEditedPhoto" class="button editor-button full-button">Download Edited Photo</button>
+          <button id="printEditedPhoto" class="button print-button full-button">Print Edited Photo</button>
+          <button id="resetEditor" class="button secondary full-button">Reset All Edits</button>
+          <button class="button secondary full-button" data-page="boothPage">← Back to Photo Booth</button>
+        </div>
+      </aside>
+    </main>
+
+    <footer class="site-footer">
+      <div class="footer-circuit">━━━━●━━━━━━━━●━━━━</div>
+      <p>NEXTGEN SMART CLASSROOM</p>
+      <span>MADE WITH CREATIVITY · POWERED BY INNOVATION</span>
+    </footer>
+  </section>
+
+  <section id="qrGeneratorPage" class="page qr-page">
+    <header class="header">
+      <button class="back-home" data-page="welcomePage">← HOME</button>
+      <div class="brand-label">
+        <div class="brand-symbol">
+          <img src="./NEXTGEN%20LOGO.jpg" alt="NEXTGEN Logo">
+        </div>
+        <span>NEXTGEN SMART CLASSROOM</span>
+      </div>
+      <p class="eyebrow">SHARE A LINK · SCAN A QR</p>
+      <h1>Image QR Download</h1>
+      <p class="subtitle">Turn a public image URL into a scannable QR code.</p>
+      <div class="header-line"></div>
+    </header>
+
+    <main class="qr-layout">
+      <div>
+        <section class="qrg-card">
+          <h2>1. Image source</h2>
+          <p class="qrg-muted">
+            A QR code can only contain a URL that a phone can actually reach.
+            Paste a direct public image URL, or upload one if an upload host is configured.
+          </p>
+          <div class="qrg-tabs" role="tablist" aria-label="Image source">
+            <button id="qrgTabUrl" class="qrg-tab is-active" type="button" role="tab" aria-selected="true" aria-controls="qrgPanelUrl">
+              Paste image URL
+            </button>
+            <button id="qrgTabUpload" class="qrg-tab" type="button" role="tab" aria-selected="false" aria-controls="qrgPanelUpload">
+              Upload image
+            </button>
+          </div>
+          <div id="qrgPanelUrl" class="qrg-panel" role="tabpanel" aria-labelledby="qrgTabUrl">
+            <label class="qrg-label" for="qrgUrlInput">Public image URL</label>
+            <input id="qrgUrlInput" class="qrg-input" type="url" inputmode="url" spellcheck="false" autocomplete="off" placeholder="https://example.com/photos/team.jpg" aria-describedby="qrgUrlHelp qrgUrlMessage">
+            <p id="qrgUrlHelp" class="qrg-help">
+              Must start with <code>https://</code> (or <code>http://</code>) and point
+              directly at an image file, not a web page that contains one.
+            </p>
+            <p id="qrgUrlMessage" class="qrg-message" role="status" aria-live="polite"></p>
+            <div id="qrgForceWrap" class="qrg-force" hidden>
+              <label class="qrg-checkbox">
+                <input id="qrgForceQr" type="checkbox">
+                <span>Generate the QR code anyway (I know this link works on a phone)</span>
+              </label>
+            </div>
+          </div>
+          <div id="qrgPanelUpload" class="qrg-panel" role="tabpanel" aria-labelledby="qrgTabUpload" hidden>
+            <p id="qrgUploadNotice" class="qrg-message qrg-message-warning" hidden></p>
+            <div id="qrgDropzone" class="qrg-dropzone" tabindex="0" role="button" aria-label="Choose an image file, or drag and drop one here">
+              <svg class="qrg-dropzone-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path d="M12 16V4m0 0L8 8m4-4 4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+              </svg>
+              <p class="qrg-dropzone-title"><strong>Click to choose</strong> or drag &amp; drop</p>
+              <p class="qrg-dropzone-hint">PNG, JPG, JPEG, GIF or WebP · up to 10 MB</p>
+            </div>
+            <input id="qrgFileInput" class="hidden" type="file" accept="image/png,image/jpeg,image/gif,image/webp">
+            <p id="qrgUploadMessage" class="qrg-message" role="status" aria-live="polite"></p>
+          </div>
+        </section>
+
+        <section class="qrg-card" style="margin-top: 24px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+            <h2>Preview</h2>
+            <button id="qrgRemoveImage" class="button secondary" type="button" hidden>Remove</button>
+          </div>
+          <div class="qrg-preview">
+            <div id="qrgPreviewEmpty" class="qrg-preview-empty">
+              <span aria-hidden="true">🖼️</span>
+              <p>No image selected yet</p>
+            </div>
+            <img id="qrgPreviewImg" class="qrg-preview-img" alt="Preview of the selected image" hidden>
+          </div>
+          <dl id="qrgPreviewMeta" class="qrg-meta" hidden>
+            <div class="qrg-meta-row"><dt>Name</dt><dd id="qrgMetaName">—</dd></div>
+            <div class="qrg-meta-row"><dt>Size</dt><dd id="qrgMetaSize">—</dd></div>
+            <div class="qrg-meta-row"><dt>Type</dt><dd id="qrgMetaType">—</dd></div>
+            <div class="qrg-meta-row"><dt>Location</dt><dd id="qrgMetaSource">—</dd></div>
+          </dl>
+        </section>
+      </div>
+
+      <section class="qrg-card">
+        <h2>2. Your QR code</h2>
+        <p class="qrg-muted">
+          The QR code encodes the exact image URL. Nothing is uploaded by this page.
+        </p>
+        <div class="qrg-qr-stage">
+          <canvas id="qrgCanvas" width="320" height="320" aria-label="Generated QR code" hidden></canvas>
+          <div id="qrgQrEmpty" class="qrg-qr-empty">
+            <span aria-hidden="true">▦</span>
+            <p>Your QR code will appear here</p>
+          </div>
+        </div>
+        <p id="qrgQrTarget" class="qrg-target" hidden></p>
+        <button id="qrgGenerateBtn" class="button primary qrg-block" type="button" disabled>Generate QR Code</button>
+        <div class="qrg-row">
+          <button id="qrgDownloadQrBtn" class="button secondary" type="button" disabled>Download QR (PNG)</button>
+          <button id="qrgCopyUrlBtn" class="button secondary" type="button" disabled>Copy Image URL</button>
+        </div>
+        <button id="qrgResetBtn" class="button secondary qrg-block" type="button">Reset</button>
+        <p id="qrgStatus" class="qrg-message qrg-message-status" role="status" aria-live="polite"></p>
+        <details class="qrg-note">
+          <summary>Will scanning download the file or open it?</summary>
+          <p>
+            That is decided by the server that hosts the image. If the server sends
+            <code>Content-Disposition: attachment</code>, the phone saves the file.
+            If it sends <code>Content-Disposition: inline</code> — which most image hosts do —
+            the phone opens the image in its browser and the user long-presses to save it.
+          </p>
+        </details>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="footer-circuit">━━━━●━━━━━━━━●━━━━</div>
+      <p>NEXTGEN SMART CLASSROOM</p>
+      <span>MADE WITH CREATIVITY · POWERED BY INNOVATION</span>
+    </footer>
+  </section>
+
+  <div id="editorPrintArea">
+    <img id="editorPrintImage" alt="Edited photo">
   </div>
-</div>
 
-<button id="generateQRBtn" class="primary" disabled>Upload Image &amp; Generate QR</button>
-<button id="retryUploadBtn" class="secondary" style="display:none">Retry Upload</button>
-<button id="downloadQRBtn" class="secondary" disabled style="display:none">Download QR</button>
-
-<!-- Load the QR library -->
-<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script>
 
 <script>
-const CF_WORKER_URL = "YOUR_WORKER_URL_HERE";   // leave as-is for demo mode
+"use strict";
 
-const qrContainer = document.getElementById("qrContainer");
-const qrcodeEl = document.getElementById("qrcode");
-const generateQRBtn = document.getElementById("generateQRBtn");
-const retryUploadBtn = document.getElementById("retryUploadBtn");
-const downloadQRBtn = document.getElementById("downloadQRBtn");
+document.addEventListener("DOMContentLoaded", () => {
+  const $ = id => document.getElementById(id);
 
-/* ---------- Upload helpers ---------- */
-async function uploadToCloudflare(blob, ext) {
-  const urlRes = await fetch(`${CF_WORKER_URL}/api/upload-url`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ contentType: blob.type })
-  });
-  if (!urlRes.ok) {
-    let errBody = await urlRes.text();
-    try { errBody = JSON.stringify(JSON.parse(errBody), null, 2); } catch (_) {}
-    throw new Error(`Requesting upload URL failed (${urlRes.status}): ${errBody}`);
-  }
-  const data = await urlRes.json();
-  if (!data.uploadURL || !data.publicURL) throw new Error("Worker response missing uploadURL or publicURL");
+  const pages = document.querySelectorAll(".page");
+  const typedSubtitles = new WeakSet();
 
-  const form = new FormData();
-  form.append("file", new File([blob], `snapstudio.${ext}`, { type: blob.type }));
-  const uploadRes = await fetch(data.uploadURL, { method: "POST", body: form });
-  if (!uploadRes.ok) {
-    let detail = `status ${uploadRes.status}`;
-    try {
-      const j = await uploadRes.json();
-      if (j.errors) detail += " — " + JSON.stringify(j.errors);
-    } catch (_) {}
-    throw new Error(`Cloudflare upload failed: ${detail}`);
-  }
-  return { publicURL: data.publicURL, provider: "Cloudflare Images" };
-}
-
-async function uploadToTemporaryHost(blob, ext) {
-  const form = new FormData();
-  form.append("reqtype", "fileupload");
-  form.append("time", "1h");
-  form.append("fileToUpload", new File([blob], `snapstudio.${ext}`, { type: blob.type }));
-
-  const res = await fetch("https://litterbox.catbox.moe/resources/internals/api.php", {
-    method: "POST",
-    body: form
-  });
-  if (!res.ok) throw new Error(`Temporary upload failed (${res.status})`);
-
-  const publicURL = (await res.text()).trim();
-  if (!publicURL.startsWith("http")) throw new Error("Temporary host returned an invalid URL: " + publicURL);
-  return { publicURL, provider: "temporary host (litterbox.catbox.moe)" };
-}
-
-/* ---------- Show the QR on the page ---------- */
-function showQR(publicURL, provider) {
-  qrcodeEl.innerHTML = "";
-  try {
-    new QRCode(qrcodeEl, {
-      text: publicURL,
-      width: 220,
-      height: 220,
-      correctLevel: QRCode.CorrectLevel.M
+  const revealObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('revealed');
+        revealObserver.unobserve(entry.target);
+      }
     });
-  } catch (err) {
-    console.error(err);
-    throw new Error("Failed to generate QR code: " + err.message);
+  }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+
+  function addScrollReveal(el, dir = null, delaySec = 0) {
+    if (!el || el.classList.contains('scroll-reveal')) return;
+    el.classList.add('scroll-reveal');
+    if (dir === 'left') el.classList.add('from-left');
+    if (dir === 'right') el.classList.add('from-right');
+    if (delaySec) el.style.setProperty('--reveal-delay', `${delaySec}s`);
+    revealObserver.observe(el);
   }
 
-  const linkEl = document.getElementById("imageLink");
-  linkEl.href = publicURL;
-  linkEl.textContent = publicURL;
+  function applyScrollReveals() {
+    document.querySelectorAll('.section-heading').forEach(el => addScrollReveal(el, 'left'));
+    document.querySelectorAll('.camera-frame').forEach(el => addScrollReveal(el));
+    document.querySelectorAll('.progress-info').forEach(el => addScrollReveal(el));
+    document.querySelectorAll('.progress-track').forEach(el => addScrollReveal(el));
+    document.querySelectorAll('.camera-controls').forEach(el => addScrollReveal(el));
+    document.querySelectorAll('.helper-text').forEach(el => addScrollReveal(el));
+    document.querySelectorAll('.film').forEach(el => addScrollReveal(el));
+    document.querySelectorAll('.print-controls').forEach(el => addScrollReveal(el));
+    document.querySelectorAll('.editor-workspace').forEach(el => addScrollReveal(el, 'left'));
+    document.querySelectorAll('.editor-actions').forEach(el => addScrollReveal(el));
+    document.querySelectorAll('.tool-panel').forEach(el => addScrollReveal(el, 'right'));
+    document.querySelectorAll('.qrg-card').forEach(el => addScrollReveal(el));
+    document.querySelectorAll('.grid-options').forEach(c => {
+      Array.from(c.children).forEach((el, i) => addScrollReveal(el, null, i * 0.06));
+    });
+    document.querySelectorAll('.countdown-options').forEach(c => {
+      Array.from(c.children).forEach((el, i) => addScrollReveal(el, null, i * 0.06));
+    });
+    document.querySelectorAll('.ratio-options').forEach(c => {
+      Array.from(c.children).forEach((el, i) => addScrollReveal(el, null, i * 0.06));
+    });
+    document.querySelectorAll('.filter-grid').forEach(c => {
+      Array.from(c.children).forEach((el, i) => addScrollReveal(el, null, i * 0.04));
+    });
+    document.querySelectorAll('.sticker-grid').forEach(c => {
+      Array.from(c.children).forEach((el, i) => addScrollReveal(el, null, i * 0.03));
+    });
+  }
 
-  const previewEl = document.getElementById("imagePreview");
-  previewEl.src = publicURL;
-  previewEl.style.display = "block";
+  function wait(ms) { return new Promise(r => setTimeout(r, ms)); }
 
-  qrContainer.style.display = "block";
-  downloadQRBtn.style.display = "inline-block";
-  downloadQRBtn.disabled = false;
-  qrContainer.scrollIntoView({ behavior: "smooth", block: "center" });
-}
+  async function typeText(el, text, speed = 40) {
+    if (!el) return;
+    el.textContent = '';
+    el.classList.add("typing-text");
+    for (let i = 0; i < text.length; i++) {
+      el.textContent += text[i];
+      await wait(speed);
+    }
+    await wait(500);
+    el.classList.remove("typing-text");
+  }
 
-/* ---------- Main generate function ---------- */
-async function generateQR() {
-  generateQRBtn.disabled = true;
-  retryUploadBtn.style.display = "none";
-  try {
-    // Assumes you already have a canvas with the photo and a getImageBlob() helper
-    if (typeof QRCode === "undefined") throw new Error("QRCode library failed to load");
+  let welcomeAnimated = false;
 
-    const blob = await getImageBlob();   // ← your existing function that returns a Blob
-    const ext = blob.type === "image/jpeg" ? "jpg" : blob.type.split("/")[1];
+  async function animateWelcomePage() {
+    if (welcomeAnimated) return;
+    welcomeAnimated = true;
+    const page = $('welcomePage');
+    if (!page) return;
+    const h1 = page.querySelector('h1');
+    const subtitle = page.querySelector('.welcome-subtitle');
+    const description = page.querySelector('.welcome-description');
+    if (h1) {
+      h1.innerHTML = '<span class="line1"></span><br><span class="line2"></span>';
+      await typeText(h1.querySelector('.line1'), 'NEXTGEN', 70);
+      await wait(80);
+      await typeText(h1.querySelector('.line2'), 'PHOTOBOOTH', 55);
+    }
+    if (subtitle) await typeText(subtitle, subtitle.textContent.trim(), 28);
+    if (description) {
+      const text = description.textContent.trim().replace(/\s+/g, ' ');
+      await typeText(description, text, 12);
+    }
+  }
 
-    let result;
-    const useCloudflare = CF_WORKER_URL && CF_WORKER_URL !== "YOUR_WORKER_URL_HERE";
+  async function typePageSubtitle(pageEl) {
+    const subtitle = pageEl.querySelector('.header .subtitle');
+    if (!subtitle || typedSubtitles.has(subtitle)) return;
+    typedSubtitles.add(subtitle);
+    const text = subtitle.textContent.trim();
+    if (!text) return;
+    await wait(120);
+    subtitle.textContent = '';
+    subtitle.classList.add('typing-text');
+    for (let i = 0; i < text.length; i++) {
+      subtitle.textContent += text[i];
+      await wait(22);
+    }
+    await wait(400);
+    subtitle.classList.remove('typing-text');
+  }
 
-    if (useCloudflare) {
-      result = await uploadToCloudflare(blob, ext);
-    } else {
+  function showPage(pageId) {
+    const target = $(pageId);
+    if (!target) return;
+    target.querySelectorAll('.scroll-reveal').forEach(el => {
+      el.classList.remove('revealed');
+      revealObserver.observe(el);
+    });
+    pages.forEach(page => page.classList.remove("active"));
+    target.classList.add("active");
+    window.scrollTo({ top: 0, behavior: "auto" });
+    if (pageId === "welcomePage") animateWelcomePage();
+    if (pageId === "editorPage") {
+      initializeEditor();
+      renderEditor();
+    }
+    typePageSubtitle(target);
+  }
+
+  $("enterBooth").addEventListener("click", () => showPage("boothPage"));
+  document.querySelectorAll("[data-page]").forEach(button => {
+    button.addEventListener("click", () => showPage(button.dataset.page));
+  });
+
+  const camera = $("camera");
+  const canvas = $("canvas");
+  const ctx = canvas.getContext("2d");
+
+  const startButton = $("startCamera");
+  const captureButton = $("capture");
+  const retakeButton = $("retake");
+  const printButton = $("print");
+  const downloadButton = $("download");
+  const cancelButton = $("cancelSession");
+  const openEditorButton = $("openEditor");
+  const showQrButton = $("showQrCode");
+
+  const placeholder = $("cameraPlaceholder");
+  const previewPlaceholder = $("previewPlaceholder");
+  const countdown = $("countdown");
+  const flash = $("flash");
+  const status = $("status");
+
+  const preview = $("preview");
+  const printImage = $("printImage");
+  const captionInput = $("captionInput");
+
+  const filmImage = $("filmImage");
+  const filmRatioBadge = $("filmRatioBadge");
+
+  const gridOptions = document.querySelectorAll(".grid-option");
+  const timerOptions = document.querySelectorAll(".timer-option");
+  const ratioOptions = document.querySelectorAll(".ratio-option");
+
+  const gridStatus = $("gridStatus");
+  const progressPercent = $("progressPercent");
+  const progressBar = $("progressBar");
+
+  const cameraFrame = document.querySelector(".camera-frame");
+
+  const qrModal = $("qrModal");
+  const qrImage = $("qrImage");
+  const qrStatus = $("qrStatus");
+  const qrDownloadLink = $("qrDownloadLink");
+  const qrDownloadBtn = $("qrDownloadBtn");
+  const qrCopyBtn = $("qrCopyBtn");
+  const qrRetryBtn = $("qrRetryBtn");
+  const qrUrlWrap = $("qrUrlWrap");
+  const qrUrlText = $("qrUrlText");
+
+  let stream = null;
+  let photoURL = null;
+  let photos = [];
+  let lastShareBlob = null;
+  let lastSharedImageUrl = "";
+  let qrCanvas = null;
+  let qrUploadInProgress = false;
+
+  let selectedCount = 4;
+  let selectedSeconds = 3;
+  let selectedRatio = "4:3";
+
+  let cameraReady = false;
+  let busy = false;
+  let sessionActive = false;
+  let cancelRequested = false;
+  let sessionToken = 0;
+  let disposed = false;
+
+  const editorCanvas = $("editorCanvas");
+  const editorCtx = editorCanvas.getContext("2d");
+
+  const editorEmpty = $("editorEmpty");
+  const editorStatus = $("editorStatus");
+
+  const brightnessInput = $("brightness");
+  const contrastInput = $("contrast");
+  const saturationInput = $("saturation");
+  const stickerSizeInput = $("stickerSize");
+  const editorCaptionInput = $("editorCaption");
+  const overlayTextInput = $("overlayTextInput");
+  const overlayTextSelect = $("overlayTextSelect");
+  const overlayFontInput = $("overlayFont");
+  const overlayFontStyleInput = $("overlayFontStyle");
+  const overlayTextColorInput = $("overlayTextColor");
+  const overlayTextSizeInput = $("overlayTextSize");
+  const overlayTextSizeValue = $("overlayTextSizeValue");
+
+  const filterButtons = document.querySelectorAll(".filter-option");
+  const stickerButtons = document.querySelectorAll(".sticker-option");
+
+  const editorState = {
+    image: null,
+    imageURL: null,
+    filter: "normal",
+    brightness: 100,
+    contrast: 100,
+    saturation: 100,
+    stickers: [],
+    texts: [],
+    selectedTextId: null,
+    nextTextId: 1,
+    selectedEmoji: null,
+    stickerSize: 64,
+    caption: "a moment to remember ♡",
+    date: "",
+    imageWidth: 900,
+    imageHeight: 1050
+  };
+
+  let editorImageToken = 0;
+  let editorReady = false;
+
+  function updateStatus(message) { status.textContent = message; }
+  function updateEditorStatus(message) { editorStatus.textContent = message; }
+
+  function updateControls() {
+    captureButton.disabled = !cameraReady || busy;
+    retakeButton.disabled = busy || photos.length === 0;
+    gridOptions.forEach(button => { button.disabled = busy; });
+    timerOptions.forEach(button => { button.disabled = busy; });
+    ratioOptions.forEach(button => { button.disabled = busy; });
+    cancelButton.classList.toggle("hidden", !sessionActive);
+    captureButton.classList.toggle("hidden", sessionActive);
+    cancelButton.disabled = !sessionActive;
+  }
+
+  function updateProgress() {
+    const percent = selectedCount > 0 ? Math.round((photos.length / selectedCount) * 100) : 0;
+    gridStatus.textContent = photos.length >= selectedCount
+      ? `All ${selectedCount} photos captured!`
+      : `Photo ${photos.length + 1} of ${selectedCount}`;
+    progressPercent.textContent = `${percent}% complete`;
+    progressBar.style.width = `${percent}%`;
+  }
+
+  function updateCaption() {
+    const caption = captionInput.value.trim() || "a moment to remember ♡";
+    const date = new Date().toLocaleDateString();
+    $("photoCaption").textContent = caption;
+    $("photoDate").textContent = date;
+    $("printCaption").textContent = caption;
+    $("printDate").textContent = date;
+  }
+
+  function clearFinalPhoto() {
+    if (photoURL) { URL.revokeObjectURL(photoURL); photoURL = null; }
+    preview.removeAttribute("src");
+    printImage.removeAttribute("src");
+    previewPlaceholder.classList.remove("hidden");
+    lastShareBlob = null;
+    lastSharedImageUrl = "";
+    qrUploadInProgress = false;
+    printButton.disabled = true;
+    downloadButton.disabled = true;
+    openEditorButton.disabled = true;
+    showQrButton.disabled = true;
+    editorState.image = null;
+    editorState.imageURL = null;
+    editorState.stickers = [];
+    editorState.texts = [];
+    editorState.selectedTextId = null;
+    editorState.selectedEmoji = null;
+    editorReady = false;
+    editorEmpty.classList.remove("hidden");
+  }
+
+  function clearPhotos() {
+    photos.forEach(photo => photo.close());
+    photos = [];
+    clearFinalPhoto();
+    updateProgress();
+  }
+
+  function selectGrid(count) {
+    if (busy) return;
+    selectedCount = count;
+    clearPhotos();
+    gridOptions.forEach(button => {
+      const selected = Number(button.dataset.count) === count;
+      button.classList.toggle("selected", selected);
+      button.setAttribute("aria-pressed", String(selected));
+    });
+    updateControls();
+    updateStatus(cameraReady
+      ? `${count}-photo layout selected. Ready to begin!`
+      : "Choose a layout, then start your camera.");
+  }
+
+  function selectCountdown(seconds) {
+    if (busy) return;
+    selectedSeconds = seconds;
+    timerOptions.forEach(button => {
+      const selected = Number(button.dataset.seconds) === seconds;
+      button.classList.toggle("selected", selected);
+      button.setAttribute("aria-pressed", String(selected));
+    });
+    updateStatus(`Countdown set to ${seconds} seconds.`);
+  }
+
+  function selectRatio(ratio) {
+    if (busy) return;
+    selectedRatio = ratio;
+    ratioOptions.forEach(button => {
+      const selected = button.dataset.ratio === ratio;
+      button.classList.toggle("selected", selected);
+      button.setAttribute("aria-pressed", String(selected));
+    });
+    if (filmImage) filmImage.dataset.ratio = ratio;
+    if (filmRatioBadge) filmRatioBadge.textContent = ratio;
+    updateStatus(`${ratio} photo size selected.`);
+  }
+
+  /* =====================================================
+     CAMERA — PATCHED for maximum device compatibility
+     ===================================================== */
+  async function startCamera() {
+    if (cameraReady || busy) return;
+
+    // 1) Secure-context check (file:// or http://non-localhost silently fails)
+    if (!window.isSecureContext) {
+      updateStatus("Camera needs HTTPS or localhost. If you opened the file directly, serve it with a local server or deploy to GitHub Pages. You can still use Photo Studio on phones via HTTPS.");
+      return;
+    }
+
+    // 2) API availability
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      updateStatus("This browser does not support camera access. Try Chrome, Firefox, Edge or Safari.");
+      return;
+    }
+
+    if (stream) {
+      stream.getTracks().forEach(t => t.stop());
+      stream = null;
+    }
+
+    startButton.disabled = true;
+    updateStatus("Opening camera...");
+
+    let newStream = null;
+
+    // 3) Try preferred facingMode
+    try {
+      newStream = await navigator.mediaDevices.getUserMedia({
+        audio: false,
+        video: {
+          facingMode: { ideal: "user" },
+          width: { ideal: 1280 },
+          height: { ideal: 960 }
+        }
+      });
+    } catch (firstErr) {
+      console.warn("Preferred camera constraints failed:", firstErr && firstErr.name);
+
+      // 4) Fallback: accept ANY camera the device has
       try {
-        result = await uploadToTemporaryHost(blob, ext);
-      } catch (uploadErr) {
-        console.error(uploadErr);
-        throw new Error(
-          "Demo upload failed (network or CORS block). " +
-          "Set up the Cloudflare Worker for reliable sharing, or use the Download Image button."
-        );
+        newStream = await navigator.mediaDevices.getUserMedia({
+          video: true,
+          audio: false
+        });
+      } catch (secondErr) {
+        console.error(secondErr);
+        const err = secondErr;
+        let msg = err.message || "Unknown camera error";
+
+        if (err.name === "NotAllowedError" || err.name === "SecurityError") {
+          msg = "Camera permission was denied. Click the camera/lock icon in your browser's address bar, choose 'Allow', then click Start Camera again.";
+        } else if (err.name === "NotFoundError" || err.name === "OverconstrainedError") {
+          msg = "No usable camera found on this device.";
+        } else if (err.name === "NotReadableError") {
+          msg = "The camera is being used by another app (Zoom, Teams, etc.). Close that app, then click Start Camera again.";
+        }
+
+        updateStatus("Camera error: " + msg);
+        startButton.disabled = false;
+        return;
       }
     }
 
-    showQR(result.publicURL, result.provider);
-  } catch (err) {
-    console.error(err);
-    alert(err.message || "Upload failed");
-    retryUploadBtn.style.display = "inline-block";
-  } finally {
-    generateQRBtn.disabled = false;
+    if (disposed) {
+      newStream.getTracks().forEach(track => track.stop());
+      return;
+    }
+
+    stream = newStream;
+    camera.srcObject = stream;
+
+    // 5) Wait for metadata so videoWidth / videoHeight are populated
+    if (camera.readyState < 1) {
+      await new Promise(resolve => {
+        const onReady = () => {
+          camera.removeEventListener("loadedmetadata", onReady);
+          resolve();
+        };
+        camera.addEventListener("loadedmetadata", onReady, { once: true });
+      });
+    }
+
+    try {
+      await camera.play();
+    } catch (playErr) {
+      console.warn("camera.play() rejected:", playErr);
+    }
+
+    cameraReady = true;
+    placeholder.classList.add("hidden");
+    startButton.textContent = "Camera Ready";
+    if (cameraFrame) cameraFrame.classList.add("is-active");
+
+    updateControls();
+    updateStatus("Choose your layout and get ready!");
   }
-}
 
-/* ---------- Wire the buttons ---------- */
-generateQRBtn.addEventListener("click", generateQR);
-retryUploadBtn.addEventListener("click", generateQR);
+  async function capturePhoto() {
+    if (!cameraReady || !camera.videoWidth || !camera.videoHeight) {
+      throw new Error("The camera is not ready.");
+    }
 
-downloadQRBtn.addEventListener("click", () => {
-  const img = qrcodeEl.querySelector("img");
-  const canvas = qrcodeEl.querySelector("canvas");
-  const src = img ? img.src : (canvas ? canvas.toDataURL("image/png") : null);
-  if (!src) return;
-  const a = document.createElement("a");
-  a.href = src;
-  a.download = `snapstudio-qr-${Date.now()}.png`;
-  a.click();
+    // Wait for a fresh painted frame when the API is available, so the first
+    // click never produces a black / empty image.
+    if ("requestVideoFrameCallback" in camera) {
+      await new Promise(resolve => camera.requestVideoFrameCallback(() => resolve()));
+    } else {
+      await wait(120);
+    }
+
+    canvas.width = camera.videoWidth;
+    canvas.height = camera.videoHeight;
+
+    // Mirror the snapshot to match the front-camera preview (selfie view).
+    ctx.save();
+    ctx.translate(canvas.width, 0);
+    ctx.scale(-1, 1);
+    ctx.drawImage(camera, 0, 0, canvas.width, canvas.height);
+    ctx.restore();
+
+    const blob = await new Promise(resolve => canvas.toBlob(resolve, "image/jpeg", 0.95));
+    if (!blob) throw new Error("Unable to create the photo.");
+    return createImageBitmap(blob);
+  }
+  /* =====================================================
+     END CAMERA PATCH
+     ===================================================== */
+
+  async function runCountdown(token) {
+    for (let remaining = selectedSeconds; remaining > 0; remaining--) {
+      if (cancelRequested || token !== sessionToken) return false;
+      countdown.textContent = String(remaining);
+      countdown.classList.remove("hidden");
+      void countdown.offsetWidth;
+      updateStatus(`Photo ${photos.length + 1} of ${selectedCount} — get ready!`);
+      await wait(1000);
+    }
+    if (cancelRequested || token !== sessionToken) return false;
+    countdown.textContent = "SMILE!";
+    updateStatus("Say cheese!");
+    await wait(250);
+    if (cancelRequested || token !== sessionToken) return false;
+    countdown.classList.add("hidden");
+    return true;
+  }
+
+  function showFlash() {
+    flash.classList.remove("hidden");
+    flash.classList.remove("active");
+    void flash.offsetWidth;
+    flash.classList.add("active");
+  }
+
+  async function startPhotoSession() {
+    if (!cameraReady || busy || sessionActive) return;
+    if (photos.length >= selectedCount) {
+      updateStatus("Press Start Over to take another set of photos.");
+      return;
+    }
+    busy = true;
+    sessionActive = true;
+    cancelRequested = false;
+    const token = ++sessionToken;
+    updateControls();
+
+    try {
+      while (photos.length < selectedCount) {
+        if (cancelRequested || token !== sessionToken) break;
+        const ready = await runCountdown(token);
+        if (!ready) break;
+        const photo = await capturePhoto();
+        if (cancelRequested || token !== sessionToken) { photo.close(); break; }
+        photos.push(photo);
+        showFlash();
+        updateProgress();
+        if (photos.length < selectedCount) {
+          updateStatus(`Photo ${photos.length} captured! Get ready for the next pose.`);
+          await wait(1200);
+        }
+      }
+      if (token !== sessionToken || cancelRequested) return;
+      if (photos.length === selectedCount) {
+        updateStatus("Creating your photo collage...");
+        await createCollage();
+        if (token === sessionToken && !cancelRequested) {
+          updateStatus("All photos captured! Your print is ready.");
+        }
+      } else {
+        updateStatus(`Session ended. ${photos.length} photo(s) captured.`);
+      }
+    } catch (error) {
+      console.error("Photo session error:", error);
+      updateStatus("Could not complete the photo session. Please try again.");
+    } finally {
+      if (token === sessionToken) {
+        countdown.classList.add("hidden");
+        busy = false;
+        sessionActive = false;
+        cancelRequested = false;
+        updateControls();
+      }
+    }
+  }
+
+  function cancelPhotoSession() {
+    if (!sessionActive) return;
+    cancelRequested = true;
+    sessionToken++;
+    sessionActive = false;
+    busy = false;
+    countdown.classList.add("hidden");
+    updateControls();
+    updateStatus(`Session cancelled. ${photos.length} captured photo(s) retained.`);
+  }
+
+  async function createCollage() {
+    if (!photos.length) throw new Error("No photos have been captured.");
+    const ratioMap = {
+      "16:9": { w: 1600, h: 900 },
+      "4:3":  { w: 1600, h: 1200 },
+      "1:1":  { w: 1400, h: 1400 }
+    };
+    const size = ratioMap[selectedRatio] || ratioMap["4:3"];
+    const outputWidth = size.w;
+    const outputHeight = size.h;
+    const padding = 20;
+    const gap = 12;
+    const columns = photos.length === 1 ? 1 : 2;
+    const rows = Math.ceil(photos.length / columns);
+    const cellWidth = (outputWidth - padding * 2 - gap * (columns - 1)) / columns;
+    const cellHeight = (outputHeight - padding * 2 - gap * (rows - 1)) / rows;
+    canvas.width = outputWidth;
+    canvas.height = outputHeight;
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, outputWidth, outputHeight);
+    photos.forEach((photo, index) => {
+      const column = index % columns;
+      const row = Math.floor(index / columns);
+      const x = padding + column * (cellWidth + gap);
+      const y = padding + row * (cellHeight + gap);
+      const scale = Math.max(cellWidth / photo.width, cellHeight / photo.height);
+      const sourceWidth = cellWidth / scale;
+      const sourceHeight = cellHeight / scale;
+      ctx.drawImage(
+        photo,
+        (photo.width - sourceWidth) / 2,
+        (photo.height - sourceHeight) / 2,
+        sourceWidth, sourceHeight,
+        x, y, cellWidth, cellHeight
+      );
+    });
+    const blob = await new Promise(resolve => canvas.toBlob(resolve, "image/jpeg", 0.95));
+    if (!blob) throw new Error("Could not generate the collage.");
+    clearFinalPhoto();
+    photoURL = URL.createObjectURL(blob);
+    preview.src = photoURL;
+    printImage.src = photoURL;
+    previewPlaceholder.classList.add("hidden");
+    updateCaption();
+    printButton.disabled = false;
+    downloadButton.disabled = false;
+    openEditorButton.disabled = false;
+    loadEditorImage(photoURL);
+    const uploadBlob = await createUploadBlob(blob);
+    lastShareBlob = uploadBlob || blob;
+    showQrButton.disabled = false;
+    showQrModal(lastShareBlob);
+  }
+
+  async function createUploadBlob(originalBlob) {
+    try {
+      const img = await createImageBitmap(originalBlob);
+      const maxSide = 1200;
+      const scale = Math.min(1, maxSide / Math.max(img.width, img.height));
+      const w = Math.round(img.width * scale);
+      const h = Math.round(img.height * scale);
+      canvas.width = w;
+      canvas.height = h;
+      ctx.drawImage(img, 0, 0, w, h);
+      img.close();
+      return await new Promise(resolve => canvas.toBlob(resolve, "image/jpeg", 0.82));
+    } catch (e) {
+      console.warn("Upload resize failed, using original:", e);
+      return originalBlob;
+    }
+  }
+
+  function retakePhoto() {
+    if (busy) return;
+    clearPhotos();
+    updateControls();
+    updateStatus(cameraReady
+      ? "Ready for another photo session!"
+      : "Start the camera when you're ready.");
+  }
+
+  async function printPhoto() {
+    if (!photoURL) return;
+    updateCaption();
+    try {
+      if (typeof printImage.decode === "function") await printImage.decode();
+      document.body.classList.remove("print-editor");
+      document.body.classList.add("print-standard");
+      window.print();
+    } catch (error) {
+      console.error("Print error:", error);
+      updateStatus("Unable to prepare the print image.");
+    }
+  }
+
+  function downloadPhoto() {
+    if (!photoURL) return;
+    downloadURL(photoURL, `nextgen-photo-${Date.now()}.jpg`);
+  }
+
+  function downloadURL(url, filename) {
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  }
+
+  async function uploadWithTimeout(name, uploadFn, blob, timeoutMs = 15000) {
+    return Promise.race([
+      uploadFn(blob),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error(`${name} timed out after ${timeoutMs / 1000}s`)), timeoutMs)
+      )
+    ]);
+  }
+
+  async function uploadTempFile(blob) {
+    const hosts = [
+      { name: "0x0.st", fn: async (blob) => {
+        const form = new FormData();
+        form.append("file", blob, `nextgen-${Date.now()}.jpg`);
+        const res = await fetch("https://0x0.st", { method: "POST", body: form });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const text = (await res.text()).trim();
+        if (!/^https?:\/\//i.test(text)) throw new Error(`Invalid response: ${text.slice(0, 100)}`);
+        return text;
+      }},
+      { name: "tmpfiles.org", fn: async (blob) => {
+        const form = new FormData();
+        form.append("file", blob, `nextgen-${Date.now()}.jpg`);
+        const res = await fetch("https://tmpfiles.org/api/v1/upload", { method: "POST", body: form });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        if (data && data.data && data.data.url) {
+          return data.data.url.replace("tmpfiles.org/", "tmpfiles.org/dl/");
+        }
+        throw new Error("Invalid JSON response");
+      }},
+      { name: "catbox.moe", fn: async (blob) => {
+        const form = new FormData();
+        form.append("reqtype", "fileupload");
+        form.append("fileToUpload", blob, `nextgen-${Date.now()}.jpg`);
+        const res = await fetch("https://catbox.moe/user/api.php", { method: "POST", body: form });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const text = (await res.text()).trim();
+        if (!/^https?:\/\//i.test(text)) throw new Error(`Invalid response: ${text.slice(0, 100)}`);
+        return text;
+      }},
+      { name: "litterbox", fn: async (blob) => {
+        const form = new FormData();
+        form.append("reqtype", "fileupload");
+        form.append("time", "72h");
+        form.append("fileToUpload", blob, `nextgen-${Date.now()}.jpg`);
+        const res = await fetch("https://litterbox.catbox.moe/resources/internals/api.php", { method: "POST", body: form });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const text = (await res.text()).trim();
+        if (!/^https?:\/\//i.test(text)) throw new Error(`Invalid response: ${text.slice(0, 100)}`);
+        return text;
+      }}
+    ];
+    const errors = [];
+    for (const host of hosts) {
+      try {
+        console.log(`[QR] Trying ${host.name}…`);
+        const url = await uploadWithTimeout(host.name, host.fn, blob);
+        console.log(`[QR] ${host.name} succeeded →`, url);
+        return url;
+      } catch (err) {
+        const msg = err && err.message ? err.message : String(err);
+        console.warn(`[QR] ${host.name} failed:`, msg);
+        errors.push(`${host.name}: ${msg}`);
+      }
+    }
+    throw new Error("All upload hosts failed. This usually means CORS is blocked or the network is restricted.\n" + errors.join("\n"));
+  }
+
+  function hideQrModal() {
+    qrModal.classList.add("hidden");
+    qrImage.removeAttribute("src");
+    qrImage.alt = "QR code to download photo";
+    qrStatus.textContent = "";
+    qrDownloadLink.href = "#";
+    qrDownloadLink.hidden = true;
+    qrDownloadBtn.disabled = true;
+    qrCopyBtn.disabled = true;
+    qrRetryBtn.disabled = true;
+    qrRetryBtn.hidden = true;
+    if (qrUrlWrap) qrUrlWrap.hidden = true;
+    if (qrUrlText) qrUrlText.textContent = "";
+  }
+
+  async function renderQrImage(url) {
+    if (typeof QRCode !== "undefined") {
+      try {
+        const c = document.createElement("canvas");
+        await QRCode.toCanvas(c, url, {
+          width: 280, margin: 4, errorCorrectionLevel: "M",
+          color: { dark: "#061640", light: "#ffffff" }
+        });
+        return { dataUrl: c.toDataURL("image/png"), canvas: c };
+      } catch (err) {
+        console.warn("QRCode.js failed, falling back to api.qrserver.com:", err);
+      }
+    }
+    const apiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=280x280&margin=8&data=${encodeURIComponent(url)}`;
+    const res = await fetch(apiUrl);
+    if (!res.ok) throw new Error("QR service unavailable");
+    const blob = await res.blob();
+    return await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const img = new Image();
+        img.onload = () => {
+          const c = document.createElement("canvas");
+          c.width = img.width; c.height = img.height;
+          c.getContext("2d").drawImage(img, 0, 0);
+          resolve({ dataUrl: c.toDataURL("image/png"), canvas: c });
+        };
+        img.onerror = () => reject(new Error("Failed to load QR image"));
+        img.src = reader.result;
+      };
+      reader.onerror = () => reject(new Error("Failed to read QR image"));
+      reader.readAsDataURL(blob);
+    });
+  }
+
+  async function showQrModal(blob) {
+    if (!blob) return;
+    if (qrUploadInProgress) return;
+    qrUploadInProgress = true;
+    qrModal.classList.remove("hidden");
+    qrImage.removeAttribute("src");
+    qrImage.alt = "Preparing QR code…";
+    qrStatus.textContent = "Uploading photo so phones can save it…";
+    qrDownloadBtn.disabled = true;
+    qrCopyBtn.disabled = true;
+    qrRetryBtn.disabled = true;
+    qrRetryBtn.hidden = true;
+    qrDownloadLink.href = "#";
+    qrDownloadLink.hidden = true;
+    if (qrUrlWrap) qrUrlWrap.hidden = true;
+
+    try {
+      let imageUrl = lastSharedImageUrl;
+      if (!imageUrl) {
+        imageUrl = await uploadTempFile(blob);
+        lastSharedImageUrl = imageUrl;
+      }
+      const { dataUrl, canvas } = await renderQrImage(imageUrl);
+      qrCanvas = canvas;
+      qrImage.src = dataUrl;
+      qrImage.alt = "QR code linking to your photo";
+      qrStatus.textContent = "Ready. Scan with any phone camera, then long-press the image to save.";
+      qrDownloadLink.href = imageUrl;
+      qrDownloadLink.hidden = false;
+      qrDownloadBtn.disabled = false;
+      qrCopyBtn.disabled = false;
+      if (qrUrlWrap && qrUrlText) {
+        qrUrlText.textContent = imageUrl;
+        qrUrlWrap.hidden = false;
+      }
+    } catch (error) {
+      console.error("QR upload error:", error);
+      lastSharedImageUrl = "";
+      qrStatus.textContent = "Upload failed. Click Retry, or try a different network.";
+      qrImage.alt = "QR unavailable — upload failed";
+      qrRetryBtn.disabled = false;
+      qrRetryBtn.hidden = false;
+    } finally {
+      qrUploadInProgress = false;
+    }
+  }
+
+  $("closeQr").addEventListener("click", hideQrModal);
+  qrModal.addEventListener("click", event => { if (event.target === qrModal) hideQrModal(); });
+
+  qrDownloadBtn.addEventListener("click", () => {
+    if (!qrCanvas) return;
+    const link = document.createElement("a");
+    link.href = qrCanvas.toDataURL("image/png");
+    link.download = `nextgen-qr-${Date.now()}.png`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  });
+
+  qrCopyBtn.addEventListener("click", async () => {
+    if (!lastSharedImageUrl) return;
+    try {
+      await navigator.clipboard.writeText(lastSharedImageUrl);
+      qrStatus.textContent = "Image URL copied to clipboard.";
+      qrStatus.classList.add("message-success");
+      setTimeout(() => qrStatus.classList.remove("message-success"), 700);
+    } catch {
+      const ta = document.createElement("textarea");
+      ta.value = lastSharedImageUrl;
+      ta.setAttribute("readonly", "");
+      ta.style.position = "fixed";
+      ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand("copy"); } catch {}
+      ta.remove();
+      qrStatus.textContent = "Image URL copied to clipboard.";
+      qrStatus.classList.add("message-success");
+      setTimeout(() => qrStatus.classList.remove("message-success"), 700);
+    }
+  });
+
+  qrRetryBtn.addEventListener("click", () => {
+    if (!lastShareBlob) {
+      qrStatus.textContent = "No photo available to upload.";
+      qrStatus.classList.add("message-shake");
+      setTimeout(() => qrStatus.classList.remove("message-shake"), 500);
+      return;
+    }
+    showQrModal(lastShareBlob);
+  });
+
+  function loadEditorImage(url) {
+    const token = ++editorImageToken;
+    editorState.image = null;
+    editorState.imageURL = url;
+    editorState.stickers = [];
+    editorState.texts = [];
+    editorState.selectedTextId = null;
+    refreshOverlayTextList();
+    syncOverlayTextControls();
+    editorState.filter = "normal";
+    editorState.brightness = 100;
+    editorState.contrast = 100;
+    editorState.saturation = 100;
+    editorState.caption = captionInput.value.trim() || "a moment to remember ♡";
+    editorState.date = new Date().toLocaleDateString();
+
+    const image = new Image();
+    image.onload = () => {
+      if (token !== editorImageToken) return;
+      editorState.image = image;
+      editorState.imageWidth = image.naturalWidth || image.width;
+      editorState.imageHeight = image.naturalHeight || image.height;
+      editorReady = true;
+      editorEmpty.classList.add("hidden");
+      editorCanvas.width = editorState.imageWidth;
+      editorCanvas.height = editorState.imageHeight;
+      syncEditorControls();
+      renderEditor();
+      updateEditorStatus("Your photo is ready to edit!");
+    };
+    image.onerror = () => {
+      if (token !== editorImageToken) return;
+      editorReady = false;
+      editorEmpty.classList.remove("hidden");
+      updateEditorStatus("Unable to load your photo. Please try again.");
+    };
+    image.src = url;
+  }
+
+  function initializeEditor() {
+    if (!photoURL) {
+      editorEmpty.classList.remove("hidden");
+      editorReady = false;
+      renderEditor();
+      return;
+    }
+    if (editorState.imageURL !== photoURL || !editorState.image) {
+      loadEditorImage(photoURL);
+    } else {
+      editorEmpty.classList.add("hidden");
+      editorReady = true;
+      renderEditor();
+    }
+    editorCaptionInput.value = editorState.caption;
+  }
+
+  const filterPresets = {
+    normal:    { brightness: 1,    contrast: 1,    saturation: 1,    sepia: 0,    grayscale: 0, hue: 0 },
+    grayscale: { brightness: 1,    contrast: 1,    saturation: 0,    sepia: 0,    grayscale: 1, hue: 0 },
+    sepia:     { brightness: 1.05, contrast: 0.95, saturation: 0.8,  sepia: 0.75, grayscale: 0, hue: 0 },
+    warm:      { brightness: 1.05, contrast: 1.02, saturation: 1.15, sepia: 0.15, grayscale: 0, hue: -8 },
+    cool:      { brightness: 1.02, contrast: 1.05, saturation: 1.1,  sepia: 0,    grayscale: 0, hue: 12 },
+    vivid:     { brightness: 1.04, contrast: 1.15, saturation: 1.65, sepia: 0,    grayscale: 0, hue: 0 },
+    soft:      { brightness: 1.08, contrast: 0.88, saturation: 0.85, sepia: 0.08, grayscale: 0, hue: 0 },
+    dreamy:    { brightness: 1.12, contrast: 0.92, saturation: 1.2,  sepia: 0.05, grayscale: 0, hue: -12 }
+  };
+
+  function getCanvasFilter() {
+    const preset = filterPresets[editorState.filter] || filterPresets.normal;
+    const brightness = editorState.brightness / 100;
+    const contrast = editorState.contrast / 100;
+    const saturation = editorState.saturation / 100;
+    return [
+      `brightness(${preset.brightness * brightness})`,
+      `contrast(${preset.contrast * contrast})`,
+      `saturate(${preset.saturation * saturation})`,
+      `sepia(${preset.sepia})`,
+      `grayscale(${preset.grayscale})`,
+      `hue-rotate(${preset.hue}deg)`
+    ].join(" ");
+  }
+
+  let exportingEditor = false;
+
+  function renderEditor() {
+    if (!editorCanvas || !editorCtx) return;
+    const width = editorCanvas.width;
+    const height = editorCanvas.height;
+    editorCtx.clearRect(0, 0, width, height);
+    if (!editorState.image || !editorReady) {
+      editorCtx.fillStyle = "#eaf2ff";
+      editorCtx.fillRect(0, 0, width, height);
+      return;
+    }
+    editorCtx.save();
+    editorCtx.filter = getCanvasFilter();
+    editorCtx.drawImage(editorState.image, 0, 0, width, height);
+    editorCtx.restore();
+
+    editorState.stickers.forEach(sticker => {
+      editorCtx.save();
+      editorCtx.textAlign = "center";
+      editorCtx.textBaseline = "middle";
+      editorCtx.font = `${sticker.size}px "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif`;
+      editorCtx.fillText(sticker.emoji, sticker.x * width, sticker.y * height);
+      editorCtx.restore();
+    });
+
+    editorState.texts.forEach(textItem => {
+      editorCtx.save();
+      editorCtx.textAlign = "center";
+      editorCtx.textBaseline = "middle";
+      editorCtx.font = `${textItem.style} ${textItem.size}px ${textItem.font}`;
+      editorCtx.lineJoin = "round";
+      editorCtx.strokeStyle = "rgba(0,0,0,0.35)";
+      editorCtx.lineWidth = Math.max(2, textItem.size * 0.055);
+      editorCtx.strokeText(textItem.text, textItem.x * width, textItem.y * height);
+      editorCtx.fillStyle = textItem.color;
+      editorCtx.fillText(textItem.text, textItem.x * width, textItem.y * height);
+      if (!exportingEditor && textItem.id === editorState.selectedTextId) {
+        const measured = editorCtx.measureText(textItem.text).width;
+        editorCtx.strokeStyle = "rgba(0, 190, 230, 0.95)";
+        editorCtx.lineWidth = Math.max(2, width * 0.0025);
+        editorCtx.setLineDash([8, 6]);
+        editorCtx.strokeRect(
+          textItem.x * width - measured / 2 - 10,
+          textItem.y * height - textItem.size * 0.75,
+          measured + 20, textItem.size * 1.5
+        );
+      }
+      editorCtx.restore();
+    });
+
+    drawEditorCaption();
+  }
+
+  function drawEditorCaption() {
+    const width = editorCanvas.width;
+    const height = editorCanvas.height;
+    const caption = editorState.caption.trim();
+    if (!caption) return;
+    const footerHeight = Math.max(80, height * 0.105);
+    editorCtx.save();
+    editorCtx.fillStyle = "rgba(255,255,255,0.94)";
+    editorCtx.fillRect(0, height - footerHeight, width, footerHeight);
+    editorCtx.textAlign = "center";
+    editorCtx.textBaseline = "middle";
+    const fontSize = Math.max(18, Math.min(34, width * 0.033));
+    editorCtx.fillStyle = "#061640";
+    editorCtx.font = `700 ${fontSize}px Inter, sans-serif`;
+    let displayCaption = caption;
+    const maxWidth = width * 0.9;
+    while (editorCtx.measureText(displayCaption).width > maxWidth && displayCaption.length > 4) {
+      displayCaption = displayCaption.slice(0, -2) + "…";
+    }
+    editorCtx.fillText(displayCaption, width / 2, height - footerHeight * 0.57);
+    editorCtx.fillStyle = "#667da4";
+    editorCtx.font = `${Math.max(12, fontSize * 0.48)}px Inter, sans-serif`;
+    editorCtx.fillText(editorState.date, width / 2, height - footerHeight * 0.19);
+    editorCtx.restore();
+  }
+
+  filterButtons.forEach(button => {
+    button.addEventListener("click", () => {
+      editorState.filter = button.dataset.filter;
+      filterButtons.forEach(option => option.classList.toggle("selected", option === button));
+      renderEditor();
+      updateEditorStatus(`${button.querySelector("span:last-child").textContent} filter applied.`);
+    });
+  });
+
+  function updateAdjustments() {
+    editorState.brightness = Number(brightnessInput.value);
+    editorState.contrast = Number(contrastInput.value);
+    editorState.saturation = Number(saturationInput.value);
+    $("brightnessValue").textContent = `${editorState.brightness}%`;
+    $("contrastValue").textContent = `${editorState.contrast}%`;
+    $("saturationValue").textContent = `${editorState.saturation}%`;
+    renderEditor();
+  }
+
+  brightnessInput.addEventListener("input", updateAdjustments);
+  contrastInput.addEventListener("input", updateAdjustments);
+  saturationInput.addEventListener("input", updateAdjustments);
+
+  $("resetAdjustments").addEventListener("click", () => {
+    brightnessInput.value = 100;
+    contrastInput.value = 100;
+    saturationInput.value = 100;
+    updateAdjustments();
+    updateEditorStatus("Brightness, contrast, and saturation reset.");
+  });
+
+  stickerButtons.forEach(button => {
+    button.addEventListener("click", () => {
+      editorState.selectedEmoji = button.dataset.emoji;
+      editorState.selectedTextId = null;
+      refreshOverlayTextList();
+      syncOverlayTextControls();
+      stickerButtons.forEach(option => option.classList.toggle("selected", option === button));
+      updateEditorStatus(`${editorState.selectedEmoji} selected. Click your photo to place it.`);
+    });
+  });
+
+  stickerSizeInput.addEventListener("input", () => {
+    editorState.stickerSize = Number(stickerSizeInput.value);
+    $("stickerSizeValue").textContent = `${editorState.stickerSize}px`;
+  });
+
+  editorCanvas.addEventListener("click", event => {
+    if (!editorReady || !editorState.image) {
+      updateEditorStatus("Take a photo first to add text or stickers.");
+      return;
+    }
+    const rect = editorCanvas.getBoundingClientRect();
+    const x = (event.clientX - rect.left) / rect.width;
+    const y = (event.clientY - rect.top) / rect.height;
+    const footerLimit = 1 - Math.max(80, editorCanvas.height * 0.105) / editorCanvas.height;
+
+    const selectedText = editorState.texts.find(item => item.id === editorState.selectedTextId);
+    if (selectedText) {
+      if (y >= footerLimit) { updateEditorStatus("Place text above the caption area."); return; }
+      selectedText.x = Math.max(0.05, Math.min(0.95, x));
+      selectedText.y = Math.max(0.04, Math.min(footerLimit - 0.03, y));
+      renderEditor();
+      updateEditorStatus("Text moved. Use the controls to customize it.");
+      return;
+    }
+    if (!editorState.selectedEmoji) { updateEditorStatus("Choose a sticker or add text first."); return; }
+    if (y >= footerLimit) { updateEditorStatus("Choose a spot above the caption."); return; }
+
+    editorState.stickers.push({
+      emoji: editorState.selectedEmoji,
+      x: Math.max(0.03, Math.min(0.97, x)),
+      y: Math.max(0.03, Math.min(footerLimit - 0.02, y)),
+      size: editorState.stickerSize
+    });
+    renderEditor();
+    updateEditorStatus(`${editorState.selectedEmoji} sticker added!`);
+  });
+
+  $("undoSticker").addEventListener("click", () => {
+    if (!editorState.stickers.length) { updateEditorStatus("There are no stickers to undo."); return; }
+    editorState.stickers.pop();
+    renderEditor();
+    updateEditorStatus("Last sticker removed.");
+  });
+
+  $("clearStickers").addEventListener("click", () => {
+    editorState.stickers = [];
+    renderEditor();
+    updateEditorStatus("All stickers removed.");
+  });
+
+  function getSelectedOverlayText() {
+    return editorState.texts.find(item => item.id === editorState.selectedTextId) || null;
+  }
+
+  function refreshOverlayTextList() {
+    const currentId = editorState.selectedTextId;
+    overlayTextSelect.innerHTML = '<option value="">No text selected</option>';
+    editorState.texts.forEach((item, index) => {
+      const option = document.createElement("option");
+      option.value = String(item.id);
+      option.textContent = `${index + 1}. ${item.text || "(empty text)"}`;
+      overlayTextSelect.appendChild(option);
+    });
+    overlayTextSelect.value = currentId == null ? "" : String(currentId);
+  }
+
+  function syncOverlayTextControls() {
+    const item = getSelectedOverlayText();
+    const hasSelection = Boolean(item);
+    overlayTextSelect.value = hasSelection ? String(item.id) : "";
+    overlayTextInput.value = hasSelection ? item.text : "";
+    overlayFontInput.value = hasSelection ? item.font : "Arial";
+    overlayFontStyleInput.value = hasSelection ? item.style : "normal";
+    overlayTextColorInput.value = hasSelection ? item.color : "#ffffff";
+    overlayTextSizeInput.value = hasSelection ? item.size : 48;
+    overlayTextSizeValue.textContent = `${overlayTextSizeInput.value}px`;
+    $("updateOverlayText").disabled = !hasSelection;
+    $("deleteOverlayText").disabled = !hasSelection;
+  }
+
+  function applyOverlayTextControls() {
+    const item = getSelectedOverlayText();
+    if (!item) return;
+    item.text = overlayTextInput.value.trim() || "Text";
+    item.font = overlayFontInput.value;
+    item.style = overlayFontStyleInput.value;
+    item.color = overlayTextColorInput.value;
+    item.size = Number(overlayTextSizeInput.value);
+    refreshOverlayTextList();
+    syncOverlayTextControls();
+    renderEditor();
+  }
+
+  $("addOverlayText").addEventListener("click", () => {
+    if (!editorReady || !editorState.image) { updateEditorStatus("Take a photo first before adding text."); return; }
+    const text = overlayTextInput.value.trim() || "Your text";
+    const id = editorState.nextTextId++;
+    editorState.texts.push({
+      id, text, x: 0.5, y: 0.4,
+      font: overlayFontInput.value,
+      style: overlayFontStyleInput.value,
+      color: overlayTextColorInput.value,
+      size: Number(overlayTextSizeInput.value)
+    });
+    editorState.selectedTextId = id;
+    editorState.selectedEmoji = null;
+    stickerButtons.forEach(button => button.classList.remove("selected"));
+    refreshOverlayTextList();
+    syncOverlayTextControls();
+    renderEditor();
+    updateEditorStatus("Text added! Click the photo to move it, or edit its style here.");
+  });
+
+  overlayTextSelect.addEventListener("change", () => {
+    editorState.selectedTextId = overlayTextSelect.value ? Number(overlayTextSelect.value) : null;
+    editorState.selectedEmoji = null;
+    syncOverlayTextControls();
+    renderEditor();
+  });
+
+  [overlayTextInput, overlayFontInput, overlayFontStyleInput, overlayTextColorInput, overlayTextSizeInput].forEach(control => {
+    control.addEventListener("input", () => {
+      overlayTextSizeValue.textContent = `${overlayTextSizeInput.value}px`;
+      applyOverlayTextControls();
+    });
+    control.addEventListener("change", applyOverlayTextControls);
+  });
+
+  $("updateOverlayText").addEventListener("click", () => {
+    if (!getSelectedOverlayText()) { updateEditorStatus("Select a text item first."); return; }
+    applyOverlayTextControls();
+    updateEditorStatus("Text changes applied.");
+  });
+
+  $("deleteOverlayText").addEventListener("click", () => {
+    if (editorState.selectedTextId == null) return;
+    editorState.texts = editorState.texts.filter(item => item.id !== editorState.selectedTextId);
+    editorState.selectedTextId = null;
+    refreshOverlayTextList();
+    syncOverlayTextControls();
+    renderEditor();
+    updateEditorStatus("Text removed from the photo.");
+  });
+
+  $("applyEditorCaption").addEventListener("click", () => {
+    editorState.caption = editorCaptionInput.value.trim();
+    renderEditor();
+    updateEditorStatus("Photo caption updated.");
+  });
+
+  editorCaptionInput.addEventListener("keydown", event => {
+    if (event.key === "Enter") { event.preventDefault(); $("applyEditorCaption").click(); }
+  });
+
+  function syncEditorControls() {
+    brightnessInput.value = editorState.brightness;
+    contrastInput.value = editorState.contrast;
+    saturationInput.value = editorState.saturation;
+    stickerSizeInput.value = editorState.stickerSize;
+    $("brightnessValue").textContent = `${editorState.brightness}%`;
+    $("contrastValue").textContent = `${editorState.contrast}%`;
+    $("saturationValue").textContent = `${editorState.saturation}%`;
+    $("stickerSizeValue").textContent = `${editorState.stickerSize}px`;
+    filterButtons.forEach(button => button.classList.toggle("selected", button.dataset.filter === editorState.filter));
+    stickerButtons.forEach(button => button.classList.toggle("selected", button.dataset.emoji === editorState.selectedEmoji));
+    editorCaptionInput.value = editorState.caption;
+  }
+
+  $("resetEditor").addEventListener("click", () => {
+    if (!editorState.image) { updateEditorStatus("Take a photo first."); return; }
+    editorState.filter = "normal";
+    editorState.brightness = 100;
+    editorState.contrast = 100;
+    editorState.saturation = 100;
+    editorState.stickers = [];
+    editorState.texts = [];
+    editorState.selectedTextId = null;
+    editorState.selectedEmoji = null;
+    editorState.stickerSize = 64;
+    editorState.caption = "a moment to remember ♡";
+    syncEditorControls();
+    refreshOverlayTextList();
+    syncOverlayTextControls();
+    renderEditor();
+    updateEditorStatus("All edits have been reset.");
+  });
+
+  function createEditedBlob() {
+    return new Promise((resolve, reject) => {
+      if (!editorReady || !editorState.image) { reject(new Error("No photo is ready to export.")); return; }
+      exportingEditor = true;
+      renderEditor();
+      exportingEditor = false;
+      editorCanvas.toBlob(blob => {
+        if (blob) resolve(blob);
+        else reject(new Error("Unable to export the edited photo."));
+      }, "image/jpeg", 0.95);
+    });
+  }
+
+  async function saveEditedPhoto() {
+    try {
+      const blob = await createEditedBlob();
+      const url = URL.createObjectURL(blob);
+      downloadURL(url, `nextgen-edited-${Date.now()}.jpg`);
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+      updateEditorStatus("Your edited photo has been downloaded!");
+    } catch (error) {
+      console.error("Download error:", error);
+      updateEditorStatus("Unable to download. Take a photo first.");
+    }
+  }
+
+  async function printEditedPhoto() {
+    try {
+      const blob = await createEditedBlob();
+      const url = URL.createObjectURL(blob);
+      const printTarget = $("editorPrintImage");
+      printTarget.src = url;
+      if (typeof printTarget.decode === "function") {
+        await printTarget.decode();
+      } else {
+        await new Promise((resolve, reject) => { printTarget.onload = resolve; printTarget.onerror = reject; });
+      }
+      document.body.classList.remove("print-standard");
+      document.body.classList.add("print-editor");
+      window.print();
+      window.addEventListener("afterprint", function cleanup() {
+        URL.revokeObjectURL(url);
+        printTarget.removeAttribute("src");
+        window.removeEventListener("afterprint", cleanup);
+      }, { once: true });
+    } catch (error) {
+      console.error("Print error:", error);
+      updateEditorStatus("Unable to print. Take a photo first and try again.");
+    }
+  }
+
+  $("saveEditedPhoto").addEventListener("click", saveEditedPhoto);
+  $("printEditedPhoto").addEventListener("click", printEditedPhoto);
+
+  startButton.addEventListener("click", startCamera);
+  captureButton.addEventListener("click", startPhotoSession);
+  cancelButton.addEventListener("click", cancelPhotoSession);
+  retakeButton.addEventListener("click", retakePhoto);
+  printButton.addEventListener("click", printPhoto);
+  downloadButton.addEventListener("click", downloadPhoto);
+
+  showQrButton.addEventListener("click", () => {
+    if (!lastShareBlob) return;
+    showQrModal(lastShareBlob);
+  });
+
+  openEditorButton.addEventListener("click", () => {
+    if (!photoURL) return;
+    showPage("editorPage");
+  });
+
+  gridOptions.forEach(button => {
+    button.addEventListener("click", () => selectGrid(Number(button.dataset.count)));
+  });
+  timerOptions.forEach(button => {
+    button.addEventListener("click", () => selectCountdown(Number(button.dataset.seconds)));
+  });
+  ratioOptions.forEach(button => {
+    button.addEventListener("click", () => selectRatio(button.dataset.ratio));
+  });
+
+  captionInput.addEventListener("input", () => {
+    updateCaption();
+    if (editorState.image) {
+      editorState.caption = captionInput.value.trim() || "a moment to remember ♡";
+      editorCaptionInput.value = editorState.caption;
+      renderEditor();
+    }
+  });
+
+  window.addEventListener("afterprint", () => {
+    document.body.classList.remove("print-standard", "print-editor");
+    if (cameraReady) updateStatus("Print window closed. Ready for your next memory!");
+  });
+
+  window.addEventListener("beforeunload", () => {
+    disposed = true;
+    sessionToken++;
+    if (stream) stream.getTracks().forEach(track => track.stop());
+    if (photoURL) URL.revokeObjectURL(photoURL);
+    photos.forEach(photo => photo.close());
+  });
+
+  selectGrid(4);
+  selectCountdown(3);
+  selectRatio("4:3");
+  updateCaption();
+  updateControls();
+
+  brightnessInput.value = 100;
+  contrastInput.value = 100;
+  saturationInput.value = 100;
+  stickerSizeInput.value = 64;
+  overlayTextSizeInput.value = 48;
+  refreshOverlayTextList();
+  syncOverlayTextControls();
+  $("brightnessValue").textContent = "100%";
+  $("contrastValue").textContent = "100%";
+  $("saturationValue").textContent = "100%";
+  $("stickerSizeValue").textContent = "64px";
+
+  applyScrollReveals();
+  showPage("welcomePage");
 });
 </script>
+
+<script>
+(() => {
+  "use strict";
+  document.addEventListener("DOMContentLoaded", () => {
+    const $ = id => document.getElementById(id);
+    const QR_UPLOAD_CONFIG = {
+      enabled: false,
+      endpoint: "",
+      fieldName: "file",
+      headers: {},
+      getUrl(data) {
+        if (typeof data === "string" && /^https?:\/\//i.test(data.trim())) return data.trim();
+        if (data && typeof data === "object") {
+          return data.url || data.link || (data.data && data.data.url) || "";
+        }
+        return "";
+      }
+    };
+    const MAX_FILE_BYTES = 10 * 1024 * 1024;
+    const ALLOWED_MIME = new Set(["image/png","image/jpeg","image/jpg","image/gif","image/webp"]);
+    const ALLOWED_EXT = /\.(png|jpe?g|gif|webp)$/i;
+
+    const els = {
+      tabUrl: $("qrgTabUrl"), tabUpload: $("qrgTabUpload"),
+      panelUrl: $("qrgPanelUrl"), panelUpload: $("qrgPanelUpload"),
+      urlInput: $("qrgUrlInput"), urlMessage: $("qrgUrlMessage"),
+      forceWrap: $("qrgForceWrap"), forceQr: $("qrgForceQr"),
+      uploadNotice: $("qrgUploadNotice"),
+      dropzone: $("qrgDropzone"), fileInput: $("qrgFileInput"),
+      uploadMessage: $("qrgUploadMessage"), removeImage: $("qrgRemoveImage"),
+      previewImg: $("qrgPreviewImg"), previewEmpty: $("qrgPreviewEmpty"),
+      previewMeta: $("qrgPreviewMeta"),
+      metaName: $("qrgMetaName"), metaSize: $("qrgMetaSize"),
+      metaType: $("qrgMetaType"), metaSource: $("qrgMetaSource"),
+      canvas: $("qrgCanvas"), qrEmpty: $("qrgQrEmpty"), qrTarget: $("qrgQrTarget"),
+      generateBtn: $("qrgGenerateBtn"), downloadQrBtn: $("qrgDownloadQrBtn"),
+      copyUrlBtn: $("qrgCopyUrlBtn"), resetBtn: $("qrgResetBtn"),
+      status: $("qrgStatus")
+    };
+    if (!els.urlInput) return;
+
+    const state = {
+      source: "url", url: "", canGenerate: false,
+      previewObjectUrl: null, file: null, checkToken: 0, uploadBusy: false
+    };
+    let urlDebounce = null;
+
+    function setMessage(el, text, type) {
+      if (!el) return;
+      el.textContent = text || "";
+      el.className = "qrg-message" + (type ? " qrg-message-" + type : "");
+    }
+    function formatBytes(b) {
+      if (!Number.isFinite(b) || b <= 0) return "0 B";
+      const u = ["B","KB","MB","GB"]; let i = 0, n = b;
+      while (n >= 1024 && i < u.length - 1) { n /= 1024; i++; }
+      return `${n.toFixed(i === 0 ? 0 : 1)} ${u[i]}`;
+    }
+    function nameFromUrl(v) {
+      try { return decodeURIComponent(new URL(v).pathname.split("/").pop() || "image"); }
+      catch { return "image"; }
+    }
+    function parseImageUrl(value) {
+      const raw = value.trim();
+      if (!raw) return { ok: false, message: "Paste an image URL first." };
+      let url;
+      try { url = new URL(raw); } catch { return { ok: false, message: "That is not a valid URL." }; }
+      if (!/^https?:$/.test(url.protocol)) {
+        return { ok: false, message: "Use an http:// or https:// URL. Local files and blob URLs cannot be scanned." };
+      }
+      if (/\.(html?|php|aspx?)$/i.test(url.pathname)) {
+        return { ok: false, message: "This URL looks like a web page, not a direct image file. Paste the direct image URL." };
+      }
+      return {
+        ok: true, url: url.href,
+        warn: url.protocol === "http:" ? "This URL is not HTTPS. Some phones may block or warn about it." : ""
+      };
+    }
+    function preflightImage(url, timeout = 8000) {
+      return new Promise(resolve => {
+        const img = new Image(); let done = false;
+        const timer = setTimeout(() => finish({ ok: false, reason: "timed out" }), timeout);
+        function finish(r) {
+          if (done) return; done = true;
+          clearTimeout(timer); img.onload = null; img.onerror = null; resolve(r);
+        }
+        img.onload = () => finish({ ok: true, width: img.naturalWidth, height: img.naturalHeight });
+        img.onerror = () => finish({ ok: false, reason: "image failed to load" });
+        img.src = url;
+      });
+    }
+    function clearPreview() {
+      if (state.previewObjectUrl) { URL.revokeObjectURL(state.previewObjectUrl); state.previewObjectUrl = null; }
+      els.previewImg.hidden = true; els.previewImg.removeAttribute("src");
+      els.previewEmpty.hidden = false; els.previewMeta.hidden = true; els.removeImage.hidden = true;
+    }
+    function showPreview(src, meta) {
+      els.previewEmpty.hidden = true; els.previewImg.hidden = false;
+      els.previewImg.src = src; els.removeImage.hidden = false;
+      els.metaName.textContent = meta.name || "—";
+      els.metaSize.textContent = meta.size || "—";
+      els.metaType.textContent = meta.type || "—";
+      els.metaSource.textContent = meta.source || "—";
+      els.previewMeta.hidden = false;
+    }
+    function clearQr() {
+      els.canvas.hidden = true; els.qrEmpty.hidden = false;
+      els.qrTarget.hidden = true; els.qrTarget.textContent = "";
+      els.downloadQrBtn.disabled = true; setMessage(els.status, "");
+    }
+    function refreshGenerate() {
+      els.generateBtn.disabled = !state.canGenerate || !state.url || state.uploadBusy;
+      els.copyUrlBtn.disabled = !state.url;
+    }
+    function setSource(source) {
+      state.source = source;
+      const isUrl = source === "url";
+      els.tabUrl.classList.toggle("is-active", isUrl);
+      els.tabUpload.classList.toggle("is-active", !isUrl);
+      els.tabUrl.setAttribute("aria-selected", String(isUrl));
+      els.tabUpload.setAttribute("aria-selected", String(!isUrl));
+      els.panelUrl.hidden = !isUrl; els.panelUpload.hidden = isUrl;
+      clearQr(); refreshGenerate();
+    }
+    function onUrlInput() {
+      const token = ++state.checkToken;
+      clearQr();
+      state.url = ""; state.canGenerate = false;
+      els.forceWrap.hidden = true; els.forceQr.checked = false;
+      clearPreview(); refreshGenerate();
+
+      const parsed = parseImageUrl(els.urlInput.value);
+      if (!parsed.ok) { setMessage(els.urlMessage, parsed.message, "error"); return; }
+      setMessage(els.urlMessage, parsed.warn || "Checking image link…", parsed.warn ? "warning" : "status");
+
+      clearTimeout(urlDebounce);
+      urlDebounce = setTimeout(async () => {
+        if (token !== state.checkToken) return;
+        const result = await preflightImage(parsed.url);
+        if (token !== state.checkToken) return;
+        if (result.ok) {
+          state.url = parsed.url; state.canGenerate = true;
+          setMessage(els.urlMessage, `Image looks reachable (${result.width} × ${result.height}px). Ready to generate.`, "success");
+          els.forceWrap.hidden = true;
+          showPreview(parsed.url, {
+            name: nameFromUrl(parsed.url),
+            size: `${result.width} × ${result.height} px`,
+            type: "Remote image", source: "Public URL"
+          });
+        } else {
+          state.url = parsed.url; state.canGenerate = els.forceQr.checked;
+          setMessage(els.urlMessage, `Could not load this image directly (${result.reason}). It may be hotlink-protected, slow, or not an image. You can still try if you know it works on a phone.`, "warning");
+          els.forceWrap.hidden = false;
+          showPreview(parsed.url, {
+            name: nameFromUrl(parsed.url),
+            size: "Unknown", type: "Remote image", source: "Public URL"
+          });
+        }
+        refreshGenerate();
+      }, 500);
+    }
+    async function uploadFile(file) {
+      const form = new FormData();
+      form.append(QR_UPLOAD_CONFIG.fieldName || "file", file, file.name);
+      const response = await fetch(QR_UPLOAD_CONFIG.endpoint, {
+        method: "POST", body: form, headers: QR_UPLOAD_CONFIG.headers || {}
+      });
+      if (!response.ok) throw new Error(`Upload failed (${response.status}).`);
+      const ct = response.headers.get("content-type") || "";
+      let data;
+      if (ct.includes("application/json")) data = await response.json();
+      else data = (await response.text()).trim();
+      const publicUrl = QR_UPLOAD_CONFIG.getUrl(data, response);
+      if (!publicUrl || !/^https?:\/\//i.test(publicUrl)) {
+        throw new Error("The upload host did not return a valid public image URL.");
+      }
+      return publicUrl;
+    }
+    async function uploadSelectedFile(file) {
+      state.uploadBusy = true; refreshGenerate();
+      setMessage(els.uploadMessage, "Uploading image…", "status");
+      try {
+        const publicUrl = await uploadFile(file);
+        if (state.file !== file) return;
+        state.url = publicUrl; state.canGenerate = true;
+        setMessage(els.uploadMessage, "Uploaded successfully. Public URL ready.", "success");
+        showPreview(publicUrl, {
+          name: file.name, size: formatBytes(file.size),
+          type: file.type || "image", source: "Uploaded public URL"
+        });
+      } catch (error) {
+        console.error("Upload error:", error);
+        if (state.file === file) {
+          state.url = ""; state.canGenerate = false;
+          setMessage(els.uploadMessage, error.message || "Upload failed. Check your upload host configuration.", "error");
+        }
+      } finally {
+        if (state.file === file) { state.uploadBusy = false; refreshGenerate(); }
+      }
+    }
+    function onFileSelected(file) {
+      if (!file) return;
+      clearQr();
+      state.file = null; state.url = ""; state.canGenerate = false;
+      refreshGenerate();
+      if (file.size > MAX_FILE_BYTES) {
+        setMessage(els.uploadMessage, "File is larger than 10 MB.", "error");
+        clearPreview(); return;
+      }
+      if (!ALLOWED_MIME.has(file.type) && !ALLOWED_EXT.test(file.name)) {
+        setMessage(els.uploadMessage, "Unsupported file type. Use PNG, JPG, JPEG, GIF, or WebP.", "error");
+        clearPreview(); return;
+      }
+      state.file = file;
+      if (state.previewObjectUrl) URL.revokeObjectURL(state.previewObjectUrl);
+      state.previewObjectUrl = URL.createObjectURL(file);
+      showPreview(state.previewObjectUrl, {
+        name: file.name, size: formatBytes(file.size),
+        type: file.type || "image", source: "Local file (not public)"
+      });
+      if (!QR_UPLOAD_CONFIG.enabled) {
+        setMessage(els.uploadMessage, "Uploads are disabled in this static build, so this local file cannot be used in a QR code. Paste a public image URL instead, or configure QR_UPLOAD_CONFIG.", "warning");
+        refreshGenerate(); return;
+      }
+      setMessage(els.uploadMessage, "Uploading selected image…", "status");
+      uploadSelectedFile(file);
+    }
+    async function generateQr() {
+      if (!state.canGenerate || !state.url || state.uploadBusy) return;
+      setMessage(els.status, "Generating QR code…", "status");
+      els.generateBtn.disabled = true;
+      try {
+        if (typeof QRCode === "undefined") throw new Error("QR library did not load. Check your internet connection.");
+        await QRCode.toCanvas(els.canvas, state.url, {
+          width: 320, margin: 4, errorCorrectionLevel: "M",
+          color: { dark: "#0b1f3a", light: "#ffffff" }
+        });
+        els.canvas.hidden = false; els.qrEmpty.hidden = true;
+        els.qrTarget.hidden = false; els.qrTarget.textContent = state.url;
+        els.downloadQrBtn.disabled = false;
+        setMessage(els.status, "QR code ready. Scan it with a phone camera.", "success");
+      } catch (error) {
+        console.error("QR generation error:", error);
+        setMessage(els.status, error.message || "Could not generate the QR code.", "error");
+      } finally { refreshGenerate(); }
+    }
+    function downloadQr() {
+      if (els.canvas.hidden) return;
+      const link = document.createElement("a");
+      link.href = els.canvas.toDataURL("image/png");
+      link.download = "image-download-qr.png";
+      document.body.appendChild(link); link.click(); link.remove();
+    }
+    async function copyImageUrl() {
+      if (!state.url) return;
+      try {
+        await navigator.clipboard.writeText(state.url);
+        setMessage(els.status, "Image URL copied.", "success");
+      } catch {
+        const ta = document.createElement("textarea");
+        ta.value = state.url; ta.setAttribute("readonly", "");
+        ta.style.position = "fixed"; ta.style.opacity = "0";
+        document.body.appendChild(ta); ta.select();
+        try { document.execCommand("copy"); } catch {}
+        ta.remove();
+        setMessage(els.status, "Image URL copied.", "success");
+      }
+    }
+    function resetAll() {
+      state.checkToken++; clearTimeout(urlDebounce);
+      if (state.previewObjectUrl) URL.revokeObjectURL(state.previewObjectUrl);
+      state.previewObjectUrl = null; state.file = null;
+      state.url = ""; state.canGenerate = false; state.uploadBusy = false;
+      els.urlInput.value = ""; els.fileInput.value = "";
+      els.forceQr.checked = false; els.forceWrap.hidden = true;
+      setMessage(els.urlMessage, ""); setMessage(els.uploadMessage, ""); setMessage(els.status, "");
+      clearPreview(); clearQr(); setSource("url"); refreshGenerate();
+    }
+    els.tabUrl.addEventListener("click", () => setSource("url"));
+    els.tabUpload.addEventListener("click", () => setSource("upload"));
+    els.urlInput.addEventListener("input", onUrlInput);
+    els.forceQr.addEventListener("change", () => {
+      if (!state.url) return;
+      state.canGenerate = els.forceQr.checked; refreshGenerate();
+    });
+    els.dropzone.addEventListener("click", () => els.fileInput.click());
+    els.dropzone.addEventListener("keydown", e => {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); els.fileInput.click(); }
+    });
+    ["dragenter","dragover"].forEach(t => {
+      els.dropzone.addEventListener(t, e => { e.preventDefault(); els.dropzone.classList.add("is-dragover"); });
+    });
+    ["dragleave","drop"].forEach(t => {
+      els.dropzone.addEventListener(t, e => { e.preventDefault(); els.dropzone.classList.remove("is-dragover"); });
+    });
+    els.dropzone.addEventListener("drop", e => {
+      const f = e.dataTransfer && e.dataTransfer.files ? e.dataTransfer.files[0] : null;
+      if (f) onFileSelected(f);
+    });
+    els.fileInput.addEventListener("change", () => {
+      const f = els.fileInput.files && els.fileInput.files[0];
+      if (f) onFileSelected(f);
+    });
+    els.removeImage.addEventListener("click", () => {
+      els.fileInput.value = ""; state.file = null; state.url = ""; state.canGenerate = false;
+      setMessage(els.uploadMessage, ""); clearPreview(); clearQr(); refreshGenerate();
+    });
+    els.generateBtn.addEventListener("click", generateQr);
+    els.downloadQrBtn.addEventListener("click", downloadQr);
+    els.copyUrlBtn.addEventListener("click", copyImageUrl);
+    els.resetBtn.addEventListener("click", resetAll);
+    els.previewImg.addEventListener("error", () => {
+      els.previewImg.hidden = true; els.previewEmpty.hidden = false;
+    });
+    if (!QR_UPLOAD_CONFIG.enabled) {
+      els.uploadNotice.hidden = false;
+      els.uploadNotice.textContent = "Uploads are disabled in this static build. Paste a public image URL to generate a QR code. To enable uploads, configure QR_UPLOAD_CONFIG in the script.";
+    } else if (!QR_UPLOAD_CONFIG.endpoint) {
+      els.uploadNotice.hidden = false;
+      els.uploadNotice.textContent = "Upload is marked enabled, but no endpoint is configured. Set QR_UPLOAD_CONFIG.endpoint.";
+    }
+    setSource("url");
+    refreshGenerate();
+  });
+})();
+</script>
+</body>
+</html>
