@@ -363,16 +363,103 @@ downloadBtn.addEventListener("click", async () => {
   }
 });
 
-/* ========== QR / CLOUDFLARE UPLOAD ========== */
+/* ========== QR / UPLOAD ========== */
+async function uploadToCloudflare(blob, ext) {
+  setStatus("Requesting one-time upload URL from Cloudflare Worker…", "info");
+
+  const urlRes = await fetch(`${CF_WORKER_URL}/api/upload-url`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ contentType: blob.type })
+  });
+
+  if (!urlRes.ok) {
+    let errBody = await urlRes.text();
+    try { errBody = JSON.stringify(JSON.parse(errBody), null, 2); } catch (_) {}
+    throw new Error(`Requesting upload URL failed (${urlRes.status}): ${errBody}`);
+  }
+
+  const data = await urlRes.json();
+  if (!data.uploadURL || !data.publicURL) {
+    throw new Error("Worker response missing uploadURL or publicURL");
+  }
+
+  setStatus("Uploading image to Cloudflare…", "info");
+
+  const form = new FormData();
+  form.append("file", new File([blob], `snapstudio.${ext}`, { type: blob.type }));
+
+  const uploadRes = await fetch(data.uploadURL, { method: "POST", body: form });
+
+  if (!uploadRes.ok) {
+    let detail = `status ${uploadRes.status}`;
+    try {
+      const j = await uploadRes.json();
+      if (j.errors) detail += " — " + JSON.stringify(j.errors);
+    } catch (_) {}
+    throw new Error(`Cloudflare upload failed: ${detail}`);
+  }
+
+  return { publicURL: data.publicURL, provider: "Cloudflare Images" };
+}
+
+async function uploadToTemporaryHost(blob, ext) {
+  setStatus("Uploading to temporary host (demo mode)…", "info");
+
+  const form = new FormData();
+  form.append("file", new File([blob], `snapstudio.${ext}`, { type: blob.type }));
+
+  const res = await fetch("https://0x0.st", {
+    method: "POST",
+    body: form
+  });
+
+  if (!res.ok) {
+    throw new Error(`Temporary upload failed (${res.status})`);
+  }
+
+  const publicURL = (await res.text()).trim();
+  if (!publicURL.startsWith("http")) {
+    throw new Error("Temporary host returned an invalid URL");
+  }
+
+  return { publicURL, provider: "temporary host (0x0.st)" };
+}
+
+function showQR(publicURL, provider) {
+  qrcodeEl.innerHTML = "";
+  try {
+    new QRCode(qrcodeEl, {
+      text: publicURL,
+      width: 220,
+      height: 220,
+      correctLevel: QRCode.CorrectLevel.M
+    });
+  } catch (err) {
+    console.error(err);
+    throw new Error("Failed to generate QR code: " + err.message);
+  }
+
+  qrContainer.style.display = "block";
+  downloadQRBtn.style.display = "inline-block";
+  downloadQRBtn.disabled = false;
+
+  const note = provider.includes("temporary")
+    ? " (demo mode — link expires after a while)"
+    : "";
+
+  setStatus(
+    `QR code ready. It links to a hosted image on ${provider}${note}. Scanning opens the image in the browser. Long-press the image (or right-click → Save Image) to save it.`,
+    "success"
+  );
+}
+
 async function generateQR() {
   generateQRBtn.disabled = true;
   retryUploadBtn.style.display = "none";
   try {
     if (!photoReady || !sourceImage) {
       throw new Error("No photo is ready. Capture or upload an image first.");
-    }
-    if (!CF_WORKER_URL || CF_WORKER_URL === "YOUR_WORKER_URL_HERE") {
-      throw new Error("CF_WORKER_URL is not configured. Edit the HTML and paste your Worker URL.");
     }
     if (typeof QRCode === "undefined") {
       throw new Error("QRCode library failed to load. Check your network connection.");
@@ -382,61 +469,16 @@ async function generateQR() {
     const blob = await getImageBlob();
     const ext = blob.type === "image/jpeg" ? "jpg" : blob.type.split("/")[1];
 
-    setStatus("Requesting one-time upload URL from Cloudflare Worker…", "info");
+    let result;
+    const useCloudflare = CF_WORKER_URL && CF_WORKER_URL !== "YOUR_WORKER_URL_HERE";
 
-    const urlRes = await fetch(`${CF_WORKER_URL}/api/upload-url`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ contentType: blob.type })
-    });
-
-    if (!urlRes.ok) {
-      let errBody = await urlRes.text();
-      try { errBody = JSON.stringify(JSON.parse(errBody), null, 2); } catch (_) {}
-      throw new Error(`Requesting upload URL failed (${urlRes.status}): ${errBody}`);
+    if (useCloudflare) {
+      result = await uploadToCloudflare(blob, ext);
+    } else {
+      result = await uploadToTemporaryHost(blob, ext);
     }
 
-    const { uploadURL, imageId, publicURL } = await urlRes.json();
-    if (!uploadURL || !publicURL) {
-      throw new Error("Worker response missing uploadURL or publicURL");
-    }
-
-    setStatus("Uploading image to Cloudflare…", "info");
-
-    const form = new FormData();
-    form.append("file", new File([blob], `snapstudio.${ext}`, { type: blob.type }));
-
-    const uploadRes = await fetch(uploadURL, {
-      method: "POST",
-      body: form
-    });
-
-    if (!uploadRes.ok) {
-      let detail = `status ${uploadRes.status}`;
-      try {
-        const j = await uploadRes.json();
-        if (j.errors) detail += " — " + JSON.stringify(j.errors);
-      } catch (_) {}
-      throw new Error(`Cloudflare upload failed: ${detail}`);
-    }
-
-    // Success — show QR
-    qrcodeEl.innerHTML = "";
-    new QRCode(qrcodeEl, {
-      text: publicURL,
-      width: 220,
-      height: 220,
-      correctLevel: QRCode.CorrectLevel.M
-    });
-
-    qrContainer.style.display = "block";
-    downloadQRBtn.style.display = "inline-block";
-    downloadQRBtn.disabled = false;
-
-    setStatus(
-      "QR code ready. It links to a hosted image on Cloudflare Images. Scanning opens the image in the browser (served inline). Long-press the image (or right-click → Save Image on desktop) to save it.",
-      "success"
-    );
+    showQR(result.publicURL, result.provider);
   } catch (err) {
     console.error(err);
     setStatus(err.message || "Upload failed", "error");
@@ -452,9 +494,14 @@ retryUploadBtn.addEventListener("click", generateQR);
 /* QR download */
 downloadQRBtn.addEventListener("click", () => {
   const img = qrcodeEl.querySelector("img");
-  if (!img) return;
+  const canvas = qrcodeEl.querySelector("canvas");
+  const src = img ? img.src : (canvas ? canvas.toDataURL("image/png") : null);
+  if (!src) {
+    setStatus("Could not find QR image to download", "error");
+    return;
+  }
   const a = document.createElement("a");
-  a.href = img.src;
+  a.href = src;
   a.download = `snapstudio-qr-${Date.now()}.png`;
   a.click();
 });
