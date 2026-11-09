@@ -3,289 +3,483 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
-<title>SnapStudio — Camera → Crop → Cloudflare Images + QR</title>
+<meta name="theme-color" content="#061640" />
+<title>SnapStudio — NEXTGEN · Camera → Crop → Cloudflare Images + QR</title>
 <style>
-  :root {
-    --bg: #0f1115;
-    --panel: #181b22;
-    --border: #2a2f3a;
-    --accent: #3b82f6;
-    --accent-hover: #2563eb;
-    --text: #e8eaed;
-    --muted: #9aa0aa;
-    --danger: #ef4444;
-    --success: #22c55e;
-  }
-  * { box-sizing: border-box; }
-  body {
-    margin: 0;
-    font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    min-height: 100vh;
-  }
-  header {
-    padding: 1rem 1.25rem;
-    border-bottom: 1px solid var(--border);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-  }
-  header h1 { margin: 0; font-size: 1.25rem; font-weight: 600; }
-  .container {
-    max-width: 960px;
-    margin: 0 auto;
-    padding: 1.25rem;
-    display: grid;
-    gap: 1.25rem;
-  }
-  .panel {
-    background: var(--panel);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 1rem;
-  }
-  .row { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; }
-  button, select, input[type="range"] {
-    font: inherit;
-    color: inherit;
-    background: #22262f;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 0.5rem 0.85rem;
-    cursor: pointer;
-  }
-  button:hover:not(:disabled) { background: #2c313c; }
-  button.primary {
-    background: var(--accent);
-    border-color: var(--accent);
-    color: white;
-    font-weight: 600;
-  }
-  button.primary:hover:not(:disabled) { background: var(--accent-hover); }
-  button.secondary { background: #2a2f3a; }
-  button:disabled { opacity: 0.5; cursor: not-allowed; }
-  #previewWrap {
-    position: relative;
-    background: #000;
-    border-radius: 10px;
-    overflow: hidden;
-    aspect-ratio: 16/9;
-    max-height: 70vh;
-  }
-  #preview, #canvas {
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-    display: block;
-  }
-  #canvas { display: none; }
-  .controls { margin-top: 0.75rem; }
-  label { font-size: 0.85rem; color: var(--muted); margin-right: 0.35rem; }
-  .status {
-    margin-top: 0.75rem;
-    padding: 0.6rem 0.8rem;
-    border-radius: 8px;
-    font-size: 0.9rem;
-    min-height: 2.2rem;
-  }
-  .status.info { background: #1e293b; color: #93c5fd; }
-  .status.error { background: #450a0a; color: #fecaca; }
-  .status.success { background: #052e16; color: #bbf7d0; }
-  #qrContainer {
-    display: none;
-    text-align: center;
-    margin-top: 1rem;
-  }
-  #qrcode { margin: 0.75rem auto; }
-  .privacy {
-    font-size: 0.8rem;
-    color: var(--muted);
-    margin-top: 1rem;
-    line-height: 1.4;
-  }
-  #retryUploadBtn { display: none; }
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Orbitron:wght@500;600;700;800;900&display=swap');
 
-  /* ============================================================
-     ADDITIVE ENHANCEMENTS — added on top of the original styles.
-     None of the existing rules above are modified or removed.
-     ============================================================ */
+/* ============================================================
+   NEXTGEN THEME VARIABLES
+   ============================================================ */
+:root {
+  --navy: #061640;
+  --navy-light: #0b2863;
+  --blue: #0868e9;
+  --electric: #168fff;
+  --cyan: #19d4ff;
+  --background: #f0f6ff;
+  --ink: #102653;
+  --muted: #667da4;
+  --border: #cfdef5;
 
-  @keyframes fade-up {
-    from { opacity: 0; transform: translateY(24px); }
-    to   { opacity: 1; transform: translateY(0); }
-  }
-  @keyframes slide-in-left {
-    from { opacity: 0; transform: translateX(-24px); }
-    to   { opacity: 1; transform: translateX(0); }
-  }
-  @keyframes slide-in-right {
-    from { opacity: 0; transform: translateX(24px); }
-    to   { opacity: 1; transform: translateX(0); }
-  }
-  @keyframes blink-caret {
-    0%, 100% { opacity: 1; }
-    50%      { opacity: 0; }
-  }
-  @keyframes status-pop {
-    0%   { transform: scale(1); }
-    35%  { transform: scale(1.03); }
-    70%  { transform: scale(0.98); }
-    100% { transform: scale(1); }
-  }
-  @keyframes status-shake {
-    0%, 100% { transform: translateX(0); }
-    20%      { transform: translateX(-6px); }
-    40%      { transform: translateX(6px); }
-    60%      { transform: translateX(-4px); }
-    80%      { transform: translateX(4px); }
-  }
-  @keyframes badge-pop {
-    0%   { transform: scale(1); }
-    50%  { transform: scale(1.08); }
-    100% { transform: scale(1); }
-  }
-  @keyframes qr-fade-in {
-    from { opacity: 0; transform: translateY(10px) scale(0.98); }
-    to   { opacity: 1; transform: translateY(0) scale(1); }
-  }
-  @keyframes preview-glow {
-    0%, 100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.0); }
-    50%      { box-shadow: 0 0 0 6px rgba(59, 130, 246, 0.12); }
-  }
+  /* SnapStudio-compatible aliases pointing at NEXTGEN values */
+  --bg: #f0f6ff;
+  --panel: rgba(255,255,255,.96);
+  --panel2: #f8fbff;
+  --accent: #0868e9;
+  --accent-hover: #0554c2;
+  --text: #102653;
+  --danger: #a32132;
+  --success: #0b6b3a;
+}
 
-  /* Scroll-reveal base */
-  .scroll-reveal {
-    opacity: 0;
-    transform: translateY(24px);
-    transition:
-      opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1),
-      transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
-    transition-delay: var(--reveal-delay, 0s);
-    will-change: opacity, transform;
-  }
-  .scroll-reveal.revealed {
-    opacity: 1;
-    transform: translateY(0);
-  }
-  .scroll-reveal.from-left {
-    transform: translateX(-24px);
-  }
-  .scroll-reveal.from-left.revealed {
-    transform: translateX(0);
-  }
-  .scroll-reveal.from-right {
-    transform: translateX(24px);
-  }
-  .scroll-reveal.from-right.revealed {
-    transform: translateX(0);
-  }
+* { box-sizing: border-box; }
 
-  /* Typing cursor */
-  .typing-text::after {
-    content: "|";
-    display: inline-block;
-    margin-left: 2px;
-    font-weight: 300;
-    animation: blink-caret 0.7s step-end infinite;
-  }
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: 'Inter', sans-serif;
+  color: var(--ink);
+  background:
+    radial-gradient(ellipse at top left, #d9edff, transparent 38%),
+    var(--background);
+  text-align: left;
+}
 
-  /* Status feedback (applies when class first added) */
-  .status.success { animation: status-pop 0.5s ease-out; }
-  .status.error   { animation: status-shake 0.5s ease-out; }
+/* ============================================================
+   HEADER — NEXTGEN gradient banner
+   ============================================================ */
+header {
+  position: relative;
+  padding: 1.5rem 1.25rem 1.35rem;
+  overflow: hidden;
+  color: white;
+  background: linear-gradient(130deg, #041137, #0b398e 65%, #087de5);
+  border-bottom: 4px solid var(--cyan);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+header::before,
+header::after {
+  content: "";
+  position: absolute;
+  width: 180px; height: 180px;
+  border: 1px solid #36c7ff40;
+  border-radius: 50%;
+  pointer-events: none;
+}
+header::before { top: -110px; left: -50px; }
+header::after  { right: -70px; bottom: -135px; }
 
-  /* QR appear animation */
-  .qr-appear {
-    animation: qr-fade-in 0.55s cubic-bezier(0.34, 1.56, 0.64, 1);
-  }
+header h1 {
+  position: relative;
+  margin: 0;
+  font-family: 'Orbitron', sans-serif;
+  font-size: clamp(1.35rem, 3.2vw, 1.75rem);
+  font-weight: 900;
+  letter-spacing: -0.5px;
+  text-transform: uppercase;
+  color: white;
+  z-index: 1;
+}
 
-  /* Ratio badge (created via JS, floated in top-right of preview) */
-  .ratio-badge {
-    position: absolute;
-    top: 12px;
-    right: 12px;
-    padding: 6px 10px;
-    border-radius: 8px;
-    background: rgba(15, 17, 21, 0.86);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    color: #93c5fd;
-    font-size: 0.78rem;
-    font-weight: 700;
-    letter-spacing: 0.5px;
-    z-index: 10;
-    display: none;
-    align-items: center;
-    justify-content: center;
-    border: 1px solid rgba(147, 197, 253, 0.35);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45);
-    font-family: "SF Mono", Menlo, Consolas, monospace;
-    pointer-events: none;
-    user-select: none;
-  }
-  .ratio-badge.badge-pop {
-    animation: badge-pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
-  }
+header .tagline {
+  position: relative;
+  z-index: 1;
+  padding: 0.4rem 0.75rem;
+  border: 1px solid #19d4ff55;
+  border-radius: 6px;
+  background: #19d4ff12;
+  color: var(--cyan);
+  font-family: 'Orbitron', sans-serif;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+}
 
-  /* Jump-to-QR button — subtle appearance */
-  .jump-qr-btn {
-    animation: fade-up 0.4s ease-out;
-  }
+/* ============================================================
+   LAYOUT
+   ============================================================ */
+.container {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 1.75rem 1.25rem 2.5rem;
+  display: grid;
+  gap: 1.25rem;
+}
 
-  /* Polish: buttons feel more tactile */
-  button {
-    transition:
-      transform 0.15s ease,
-      background-color 0.15s ease,
-      box-shadow 0.15s ease,
-      opacity 0.15s ease;
-  }
-  button:not(:disabled):active {
-    transform: scale(0.97);
-  }
-  button:not(:disabled):hover {
-    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
-  }
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-top: 4px solid var(--electric);
+  border-radius: 18px;
+  padding: 1.35rem;
+  box-shadow: 0 12px 35px #0b398e0c;
+  transition: box-shadow 0.3s ease, transform 0.3s ease;
+}
+.panel:hover {
+  box-shadow: 0 16px 42px #0b398e14;
+}
 
-  /* Panel hover lift */
-  .panel {
-    transition: box-shadow 0.3s ease, transform 0.3s ease;
-  }
-  .panel:hover {
-    box-shadow: 0 10px 32px rgba(0, 0, 0, 0.25);
-  }
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  align-items: center;
+}
 
-  /* Preview wrap glow when camera is active */
-  #previewWrap.is-active {
-    animation: preview-glow 2.4s ease-in-out infinite;
-  }
+/* ============================================================
+   FORM CONTROLS
+   ============================================================ */
+button,
+select,
+input[type="range"],
+input[type="file"] {
+  font: inherit;
+  color: var(--ink);
+  background: #f8fbff;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  padding: 0.55rem 0.9rem;
+  cursor: pointer;
+  transition:
+    transform 0.15s ease,
+    background-color 0.15s ease,
+    box-shadow 0.15s ease,
+    opacity 0.15s ease;
+}
 
-  /* QR container hover lift */
-  #qrContainer {
-    transition: transform 0.3s ease;
-  }
-  #qrContainer:hover {
-    transform: translateY(-2px);
-  }
+button:hover:not(:disabled) {
+  background: #eef6ff;
+  box-shadow: 0 4px 12px #0868e920;
+}
+button:not(:disabled):active { transform: scale(0.97); }
 
-  /* Respect users who prefer reduced motion */
-  @media (prefers-reduced-motion: reduce) {
-    *, *::before, *::after {
-      animation-duration: 0.01ms !important;
-      animation-iteration-count: 1 !important;
-      transition-duration: 0.01ms !important;
-    }
-    .scroll-reveal {
-      opacity: 1 !important;
-      transform: none !important;
-    }
+button.primary {
+  background: linear-gradient(110deg, #0756d7, #078cf4);
+  border: 1px solid #087de5;
+  color: white;
+  font-weight: 700;
+}
+button.primary:hover:not(:disabled) {
+  background: linear-gradient(110deg, #0868e9, #168fff);
+  box-shadow: 0 6px 18px #0868e935;
+}
+
+button.secondary {
+  background: #e8f1ff;
+  border: 1px solid #c8dcff;
+  color: var(--navy);
+  font-weight: 600;
+}
+button.secondary:hover:not(:disabled) {
+  background: #d9e8ff;
+}
+
+button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+label {
+  font-size: 0.8rem;
+  color: var(--ink);
+  font-weight: 700;
+  margin-right: 0.35rem;
+  letter-spacing: 0.3px;
+}
+
+input[type="range"] { accent-color: var(--blue); }
+
+/* ============================================================
+   PREVIEW STAGE
+   ============================================================ */
+#previewWrap {
+  position: relative;
+  background: #dce9fb;
+  border: 3px solid #d9e8ff;
+  border-radius: 14px;
+  overflow: hidden;
+  aspect-ratio: 16/9;
+  max-height: 70vh;
+  transition: border-color 0.3s ease;
+}
+#previewWrap.is-active {
+  border-color: #19d4ff88;
+  animation: preview-glow 2.4s ease-in-out infinite;
+}
+
+#preview, #canvas {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+#canvas { display: none; }
+
+.controls { margin-top: 0.9rem; }
+
+/* ============================================================
+   STATUS
+   ============================================================ */
+.status {
+  margin-top: 0.9rem;
+  padding: 0.7rem 0.9rem;
+  border-radius: 9px;
+  font-size: 0.9rem;
+  min-height: 2.2rem;
+  border: 1px solid transparent;
+}
+.status.info {
+  background: #eef6ff;
+  color: var(--blue);
+  border-color: #c8dcff;
+}
+.status.error {
+  background: #fff0f1;
+  color: var(--danger);
+  border-color: #efc4ca;
+}
+.status.success {
+  background: #eafaf1;
+  color: var(--success);
+  border-color: #b8ecc9;
+}
+.status.success { animation: status-pop 0.5s ease-out; }
+.status.error   { animation: status-shake 0.5s ease-out; }
+
+/* ============================================================
+   QR PANEL
+   ============================================================ */
+#qrContainer {
+  display: none;
+  text-align: center;
+  margin-top: 1rem;
+  padding: 1.25rem;
+  background: #f8fbff;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  transition: transform 0.3s ease;
+}
+#qrContainer:hover { transform: translateY(-2px); }
+
+#qrContainer h3 {
+  margin: 0 0 0.75rem;
+  font-family: 'Orbitron', sans-serif;
+  color: var(--navy);
+  font-size: 1rem;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+#qrcode {
+  margin: 0.75rem auto;
+  background: white;
+  padding: 12px;
+  border-radius: 10px;
+  width: fit-content;
+  border: 2px solid var(--border);
+  box-shadow: 0 4px 14px #0868e915;
+}
+#qrcode canvas, #qrcode img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+#imageLink {
+  color: var(--blue);
+  word-break: break-all;
+  font-weight: 600;
+  text-decoration: underline;
+  text-decoration-color: var(--cyan);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+}
+
+#imagePreview {
+  max-width: 100%;
+  max-height: 240px;
+  border-radius: 10px;
+  border: 2px solid var(--border);
+  box-shadow: 0 4px 14px #0868e915;
+  display: none;
+}
+
+/* ============================================================
+   PRIVACY NOTE
+   ============================================================ */
+.privacy {
+  font-size: 0.78rem;
+  color: var(--muted);
+  margin-top: 1rem;
+  line-height: 1.6;
+  padding: 0.75rem 0.9rem;
+  background: #f8fbff;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+}
+
+/* ============================================================
+   NEXTGEN-STYLE FOOTER
+   ============================================================ */
+.site-footer {
+  padding: 1.25rem 1rem;
+  text-align: center;
+  color: #cce5ff;
+  background: var(--navy);
+  border-top: 3px solid var(--cyan);
+  font-family: 'Orbitron', sans-serif;
+}
+.footer-circuit {
+  margin-bottom: 0.5rem;
+  color: var(--cyan);
+  font-size: 0.85rem;
+  letter-spacing: 2px;
+}
+.site-footer p {
+  margin: 0 0 0.35rem;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 2px;
+}
+.site-footer > span {
+  font-size: 0.62rem;
+  letter-spacing: 1px;
+}
+
+/* ============================================================
+   ADDITIVE ANIMATIONS
+   ============================================================ */
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes blink-caret {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0; }
+}
+@keyframes status-pop {
+  0%   { transform: scale(1); }
+  35%  { transform: scale(1.03); }
+  70%  { transform: scale(0.98); }
+  100% { transform: scale(1); }
+}
+@keyframes status-shake {
+  0%, 100% { transform: translateX(0); }
+  20%      { transform: translateX(-6px); }
+  40%      { transform: translateX(6px); }
+  60%      { transform: translateX(-4px); }
+  80%      { transform: translateX(4px); }
+}
+@keyframes badge-pop {
+  0%   { transform: scale(1); }
+  50%  { transform: scale(1.08); }
+  100% { transform: scale(1); }
+}
+@keyframes qr-fade-in {
+  from { opacity: 0; transform: translateY(10px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes preview-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(25, 212, 255, 0); }
+  50%      { box-shadow: 0 0 0 6px rgba(25, 212, 255, 0.15); }
+}
+
+/* Scroll-reveal */
+.scroll-reveal {
+  opacity: 0;
+  transform: translateY(24px);
+  transition:
+    opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+  transition-delay: var(--reveal-delay, 0s);
+  will-change: opacity, transform;
+}
+.scroll-reveal.revealed {
+  opacity: 1;
+  transform: translateY(0);
+}
+.scroll-reveal.from-left  { transform: translateX(-24px); }
+.scroll-reveal.from-left.revealed  { transform: translateX(0); }
+.scroll-reveal.from-right { transform: translateX(24px); }
+.scroll-reveal.from-right.revealed { transform: translateX(0); }
+
+/* Typing cursor */
+.typing-text::after {
+  content: "|";
+  display: inline-block;
+  margin-left: 2px;
+  font-weight: 300;
+  animation: blink-caret 0.7s step-end infinite;
+}
+
+/* QR appear */
+.qr-appear {
+  animation: qr-fade-in 0.55s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Ratio badge — floating in top-right of #previewWrap */
+.ratio-badge {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: rgba(6, 22, 64, 0.86);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: var(--cyan);
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  z-index: 10;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(25, 212, 255, 0.45);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+  font-family: 'Orbitron', sans-serif;
+  pointer-events: none;
+  user-select: none;
+}
+.ratio-badge.badge-pop {
+  animation: badge-pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Jump-to-QR button */
+.jump-qr-btn { animation: fade-up 0.4s ease-out; }
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
+  .scroll-reveal { opacity: 1 !important; transform: none !important; }
+}
+
+/* Responsive tweaks */
+@media (max-width: 640px) {
+  header { padding: 1.15rem 1rem; }
+  .container { padding: 1.25rem 0.9rem 2rem; }
+  .panel { padding: 1.1rem; }
+  #qrContainer h3 { font-size: 0.92rem; }
+}
 </style>
 </head>
 <body>
+
 <header>
   <h1>SnapStudio</h1>
-  <span style="color:var(--muted);font-size:0.85rem">Camera · Crop · Cloudflare Images</span>
+  <span class="tagline">NEXTGEN PHOTOBOOTH</span>
 </header>
 
 <div class="container">
@@ -322,7 +516,7 @@
     </div>
 
     <div class="controls row">
-      <button id="generateQRBtn" class="primary" disabled>Upload Image & Generate QR</button>
+      <button id="generateQRBtn" class="primary" disabled>Upload Image &amp; Generate QR</button>
       <button id="retryUploadBtn" class="secondary">Retry Upload</button>
       <button id="downloadQRBtn" class="secondary" disabled style="display:none">Download QR</button>
     </div>
@@ -330,17 +524,17 @@
     <div id="status" class="status"></div>
 
     <div id="qrContainer">
-      <h3 style="margin:0 0 0.5rem;font-size:1.1rem">Share this image</h3>
+      <h3>Share this image</h3>
       <div id="qrcode"></div>
       <p style="margin:0.75rem 0 0.25rem;font-size:0.9rem;color:var(--muted)">
         Scan the QR code with any phone camera. It opens the image in the browser so anyone can save it (long-press on mobile, or right-click → Save image on desktop).
       </p>
       <p style="margin:0.5rem 0 0;font-size:0.9rem">
         Or open / share this direct link:<br>
-        <a id="imageLink" href="#" target="_blank" rel="noopener" style="color:#93c5fd;word-break:break-all"></a>
+        <a id="imageLink" href="#" target="_blank" rel="noopener"></a>
       </p>
       <div style="margin-top:0.75rem">
-        <img id="imagePreview" alt="Uploaded image preview" style="max-width:100%;max-height:240px;border-radius:8px;display:none" />
+        <img id="imagePreview" alt="Uploaded image preview" />
       </div>
     </div>
 
@@ -349,6 +543,12 @@
     </p>
   </div>
 </div>
+
+<footer class="site-footer">
+  <div class="footer-circuit">━━━━●━━━━━━━━●━━━━</div>
+  <p>NEXTGEN SMART CLASSROOM</p>
+  <span>MADE WITH CREATIVITY · POWERED BY INNOVATION</span>
+</footer>
 
 <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 <script>
@@ -367,6 +567,7 @@ window.addEventListener("error", function (event) {
         white-space: pre-wrap;
         overflow-wrap: anywhere;
         font: 13px monospace;
+        border-radius: 8px;
     `;
     box.textContent =
         "JavaScript Error:\n" +
@@ -384,7 +585,8 @@ const CF_WORKER_URL = "YOUR_WORKER_URL_HERE";   // e.g. https://snapstudio-uploa
 
 /* ========== STATE ========== */
 let stream = null;
-let facingMode = "environment";
+const isMobileDevice = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+let facingMode = isMobileDevice ? "environment" : "user";
 let sourceImage = null;          // HTMLImageElement or video frame drawn
 let photoReady = false;
 let currentBlob = null;
@@ -420,22 +622,105 @@ function revokeBlobUrl() {
   }
 }
 
-/* ========== CAMERA ========== */
+/* ========== CAMERA (patched) ========== */
 async function startCamera() {
+  // 1) Secure context check — camera APIs don't exist on file:// or http://non-localhost
+  if (!window.isSecureContext) {
+    setStatus(
+      "Camera needs HTTPS or localhost. If you double-clicked the file (file://), " +
+      "serve it with a local server (e.g. `npx serve`) or deploy to GitHub Pages. " +
+      "You can still upload an image with the file picker below.",
+      "error"
+    );
+    return;
+  }
+
+  // 2) API availability check
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    setStatus(
+      "This browser does not support camera access. Try Chrome, Firefox, Edge, or Safari. " +
+      "You can still upload an image with the file picker below.",
+      "error"
+    );
+    return;
+  }
+
+  // 3) Stop any existing stream
+  if (stream) {
+    stream.getTracks().forEach(function (t) { t.stop(); });
+    stream = null;
+  }
+
+  setStatus("Requesting camera permission\u2026", "info");
+
+  let newStream = null;
+
+  // 4) Try the preferred facingMode first
   try {
-    if (stream) stream.getTracks().forEach(t => t.stop());
-    stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode, width: { ideal: 1920 }, height: { ideal: 1080 } },
+    newStream = await navigator.mediaDevices.getUserMedia({
+      video: {
+        facingMode: { ideal: facingMode },
+        width: { ideal: 1920 },
+        height: { ideal: 1080 }
+      },
       audio: false
     });
-    preview.srcObject = stream;
-    document.getElementById("flipBtn").disabled = false;
-    document.getElementById("captureBtn").disabled = false;
-    setStatus("Camera ready", "success");
-  } catch (err) {
-    console.error(err);
-    setStatus("Camera error: " + err.message, "error");
+  } catch (firstErr) {
+    console.warn("Preferred camera constraints failed:", firstErr && firstErr.name);
+
+    // 5) Fallback: accept ANY camera the device has
+    try {
+      newStream = await navigator.mediaDevices.getUserMedia({
+        video: true,
+        audio: false
+      });
+      if (facingMode === "environment") {
+        facingMode = "user";
+      }
+    } catch (secondErr) {
+      console.error(secondErr);
+      const err = secondErr;
+      let msg = err.message || "Unknown camera error";
+
+      if (err.name === "NotAllowedError" || err.name === "SecurityError") {
+        msg = "Camera permission was denied. Click the camera/lock icon in your browser's address bar, choose 'Allow', then click Start Camera again.";
+      } else if (err.name === "NotFoundError" || err.name === "OverconstrainedError") {
+        msg = "No usable camera found on this device. You can still upload an image with the file picker below.";
+      } else if (err.name === "NotReadableError") {
+        msg = "The camera is being used by another app (Zoom, Teams, etc.). Close that app, then click Start Camera again.";
+      }
+
+      setStatus("Camera error: " + msg, "error");
+      return;
+    }
   }
+
+  // 6) Attach the stream to the <video>
+  stream = newStream;
+  preview.srcObject = stream;
+
+  // 7) Wait for metadata so videoWidth/videoHeight are populated
+  if (preview.readyState < 1) {
+    await new Promise(function (resolve) {
+      const onReady = function () {
+        preview.removeEventListener("loadedmetadata", onReady);
+        resolve();
+      };
+      preview.addEventListener("loadedmetadata", onReady, { once: true });
+    });
+  }
+
+  // 8) Start playback
+  try {
+    await preview.play();
+  } catch (playErr) {
+    console.warn("preview.play() rejected:", playErr);
+  }
+
+  // 9) Enable controls
+  document.getElementById("flipBtn").disabled = false;
+  document.getElementById("captureBtn").disabled = false;
+  setStatus("Camera ready", "success");
 }
 
 document.getElementById("startCameraBtn").addEventListener("click", startCamera);
@@ -643,7 +928,6 @@ function showQR(publicURL, provider) {
   downloadQRBtn.style.display = "inline-block";
   downloadQRBtn.disabled = false;
 
-  // Scroll the QR into view so it's obvious on the page
   qrContainer.scrollIntoView({ behavior: "smooth", block: "center" });
 
   const note = provider.includes("temporary")
@@ -720,14 +1004,8 @@ downloadQRBtn.addEventListener("click", () => {
 
 <!-- ============================================================
      ADDITIVE ENHANCEMENTS SCRIPT
-     This block does NOT touch any existing function, variable,
-     or DOM element from the working script above. Everything it
-     does is additive:
-       1. Types out the header title on first load
-       2. Scroll-reveals the panels & control rows
-       3. Shows a live aspect-ratio badge on the preview
-       4. Adds a "Jump to QR" button next to Download QR
-       5. Adds QR-appear animation, active-camera glow
+     Does NOT touch any existing function, variable, or DOM element
+     from the working script above. Everything is additive.
      ============================================================ -->
 <script>
 (function () {
@@ -735,18 +1013,12 @@ downloadQRBtn.addEventListener("click", () => {
 
   function init() {
 
-    /* ---------------------------------------------------------
-       1. HEADER TYPING ANIMATION
-       Replace h1 text with an empty string, then type it back
-       in one character at a time. Uses only textContent so it
-       cannot break the existing DOM structure or CSS.
-       --------------------------------------------------------- */
+    /* 1. HEADER TYPING ANIMATION */
     const headerH1 = document.querySelector("header h1");
     if (headerH1) {
       const fullText = headerH1.textContent || "";
       headerH1.textContent = "";
       headerH1.classList.add("typing-text");
-
       let i = 0;
       const typeInterval = setInterval(() => {
         if (i >= fullText.length) {
@@ -759,11 +1031,7 @@ downloadQRBtn.addEventListener("click", () => {
       }, 90);
     }
 
-    /* ---------------------------------------------------------
-       2. SCROLL REVEAL
-       Attach .scroll-reveal to major elements and mark them
-       .revealed once they enter the viewport.
-       --------------------------------------------------------- */
+    /* 2. SCROLL REVEAL */
     const revealObserver = new IntersectionObserver(
       function (entries) {
         entries.forEach(function (entry) {
@@ -785,31 +1053,23 @@ downloadQRBtn.addEventListener("click", () => {
       revealObserver.observe(el);
     }
 
-    // Apply to panels
     document.querySelectorAll(".panel").forEach(function (el) {
       addReveal(el, 0);
     });
 
-    // Apply to control rows with a stagger
     const controlRows = document.querySelectorAll(".controls.row");
     controlRows.forEach(function (el, i) {
       addReveal(el, 0.08 + i * 0.06);
     });
 
-    // Apply to status, QR container, privacy text
     addReveal(document.getElementById("status"), 0.32);
     addReveal(document.getElementById("qrContainer"), 0.36);
     addReveal(document.querySelector(".privacy"), 0.4);
 
-    /* ---------------------------------------------------------
-       3. LIVE RATIO BADGE
-       Create a floating badge inside #previewWrap that mirrors
-       the current value of #ratioSelect. Adds a NEW listener
-       to #ratioSelect — the original crop listener still runs.
-       --------------------------------------------------------- */
+    /* 3. LIVE RATIO BADGE */
     const previewWrap = document.getElementById("previewWrap");
     const ratioSelect = document.getElementById("ratioSelect");
-    const editControls = document.getElementById("editControls");
+    const editControlsRef = document.getElementById("editControls");
 
     if (previewWrap && ratioSelect) {
       const badge = document.createElement("div");
@@ -819,39 +1079,30 @@ downloadQRBtn.addEventListener("click", () => {
       badge.setAttribute("aria-hidden", "true");
       previewWrap.appendChild(badge);
 
-      // Additive listener — does NOT affect the crop renderer
       ratioSelect.addEventListener("change", function () {
         badge.textContent = ratioSelect.value;
         badge.classList.remove("badge-pop");
-        // force reflow so the animation can replay
         void badge.offsetWidth;
         badge.classList.add("badge-pop");
       });
 
-      // Show badge only when the edit controls are visible
-      // (i.e. after a photo has been captured or uploaded).
-      if (editControls) {
+      if (editControlsRef) {
         const editObserver = new MutationObserver(function () {
-          const visible = editControls.style.display !== "none";
+          const visible = editControlsRef.style.display !== "none";
           badge.style.display = visible ? "inline-flex" : "none";
         });
-        editObserver.observe(editControls, {
+        editObserver.observe(editControlsRef, {
           attributes: true,
           attributeFilter: ["style"]
         });
       }
     }
 
-    /* ---------------------------------------------------------
-       4. JUMP TO QR BUTTON
-       Add a button next to Download QR that appears only when
-       the QR container is visible. Clicking it scrolls the QR
-       back into view and briefly outlines it.
-       --------------------------------------------------------- */
-    const downloadQRBtn = document.getElementById("downloadQRBtn");
+    /* 4. JUMP TO QR BUTTON */
+    const downloadQRBtnRef = document.getElementById("downloadQRBtn");
     const qrBox = document.getElementById("qrContainer");
 
-    if (qrBox && downloadQRBtn) {
+    if (qrBox && downloadQRBtnRef) {
       const jumpBtn = document.createElement("button");
       jumpBtn.id = "jumpQrBtn";
       jumpBtn.type = "button";
@@ -861,22 +1112,19 @@ downloadQRBtn.addEventListener("click", () => {
 
       jumpBtn.addEventListener("click", function () {
         qrBox.scrollIntoView({ behavior: "smooth", block: "center" });
-        qrBox.style.outline = "2px solid #3b82f6";
+        qrBox.style.outline = "2px solid #19d4ff";
         qrBox.style.outlineOffset = "4px";
-        qrBox.style.borderRadius = "12px";
         setTimeout(function () {
           qrBox.style.outline = "";
           qrBox.style.outlineOffset = "";
-          qrBox.style.borderRadius = "";
         }, 1200);
       });
 
-      downloadQRBtn.parentNode.insertBefore(
+      downloadQRBtnRef.parentNode.insertBefore(
         jumpBtn,
-        downloadQRBtn.nextSibling
+        downloadQRBtnRef.nextSibling
       );
 
-      // Watch qrContainer.style.display -> show/hide jump button
       const qrObserver = new MutationObserver(function () {
         const visible = qrBox.style.display === "block";
         jumpBtn.style.display = visible ? "inline-block" : "none";
@@ -887,11 +1135,7 @@ downloadQRBtn.addEventListener("click", () => {
       });
     }
 
-    /* ---------------------------------------------------------
-       5. QR APPEAR ANIMATION
-       Watch #qrContainer for when it becomes visible, then add
-       .qr-appear so the QR fades in nicely.
-       --------------------------------------------------------- */
+    /* 5. QR APPEAR ANIMATION */
     if (qrBox) {
       const appearObserver = new MutationObserver(function () {
         if (qrBox.style.display === "block") {
@@ -906,21 +1150,14 @@ downloadQRBtn.addEventListener("click", () => {
       });
     }
 
-    /* ---------------------------------------------------------
-       6. ACTIVE CAMERA GLOW
-       Watch the "Start Camera" button state and toggle the
-       .is-active class on #previewWrap whenever the camera
-       preview becomes live.
-       --------------------------------------------------------- */
-    const startBtn = document.getElementById("startCameraBtn");
-    const captureBtn = document.getElementById("captureBtn");
-
-    if (previewWrap && captureBtn) {
+    /* 6. ACTIVE CAMERA GLOW */
+    const captureBtnRef = document.getElementById("captureBtn");
+    if (previewWrap && captureBtnRef) {
       const cameraObserver = new MutationObserver(function () {
-        const active = !captureBtn.disabled;
+        const active = !captureBtnRef.disabled;
         previewWrap.classList.toggle("is-active", active);
       });
-      cameraObserver.observe(captureBtn, {
+      cameraObserver.observe(captureBtnRef, {
         attributes: true,
         attributeFilter: ["disabled"]
       });
